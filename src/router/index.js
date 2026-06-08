@@ -1,5 +1,5 @@
-import AppLayout from '@/layout/AppLayout.vue';
-import { createRouter, createWebHistory } from 'vue-router';
+import AppLayout from '@/layout/AppLayout.vue'
+import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -12,6 +12,16 @@ const router = createRouter({
                     path: '/',
                     name: 'dashboard',
                     component: () => import('@/views/Dashboard.vue')
+                },
+                {
+                    path: '/verwaltung',
+                    name: 'verwaltung',
+                    component: () => import('@/views/verwaltung/VerwaltungList.vue')
+                },
+                {
+                    path: '/admin/verwaltung',
+                    name: 'adminverwaltung',
+                    component: () => import('@/views/admin/EventManager.vue')
                 },
                 {
                     path: '/uikit/formlayout',
@@ -92,32 +102,9 @@ const router = createRouter({
                 {
                     path: '/blocks/free',
                     name: 'blocks',
-                    meta: {
-                        breadcrumb: ['Prime Blocks', 'Free Blocks']
-                    },
                     component: () => import('@/views/utilities/Blocks.vue')
-                },
-                {
-                    path: '/pages/empty',
-                    name: 'empty',
-                    component: () => import('@/views/pages/Empty.vue')
-                },
-                {
-                    path: '/pages/crud',
-                    name: 'crud',
-                    component: () => import('@/views/pages/Crud.vue')
-                },
-                {
-                    path: '/start/documentation',
-                    name: 'documentation',
-                    component: () => import('@/views/pages/Documentation.vue')
                 }
             ]
-        },
-        {
-            path: '/landing',
-            name: 'landing',
-            component: () => import('@/views/pages/Landing.vue')
         },
         {
             path: '/pages/notfound',
@@ -141,6 +128,6 @@ const router = createRouter({
             component: () => import('@/views/pages/auth/Error.vue')
         }
     ]
-});
+})
 
-export default router;
+export default router

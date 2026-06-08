@@ -1,5 +1,5 @@
 /* eslint-env node */
-require('@rushstack/eslint-patch/modern-module-resolution');
+require('@rushstack/eslint-patch/modern-module-resolution')
 
 module.exports = {
     root: true,
@@ -13,6 +13,7 @@ module.exports = {
     rules: {
         'vue/multi-word-component-names': 'off',
         'vue/no-reserved-component-names': 'off',
+        semi: ['error', 'never'],
         'vue/component-tags-order': [
             'error',
             {
@@ -20,4 +21,4 @@ module.exports = {
             }
         ]
     }
-};
+}

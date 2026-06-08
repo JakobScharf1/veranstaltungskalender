@@ -1,10 +1,13 @@
 <script setup>
-import { ref } from 'vue';
-import AppMenuItem from './AppMenuItem.vue';
+import { ref } from 'vue'
+import AppMenuItem from './AppMenuItem.vue'
+import { useAuthStore } from '@/store/auth.ts'
+
+const auth = useAuthStore()
 
 const model = ref([
     {
-        label: 'Home',
+        label: 'Übersicht',
         items: [
             {
                 label: 'Dashboard',
@@ -14,9 +17,13 @@ const model = ref([
         ]
     },
     {
-        label: 'UI Components',
-        path: '/uikit',
+        label: 'Verwaltung',
         items: [
+            {
+                label: 'Veranstaltungen',
+                icon: 'pi pi-fw pi-calendar',
+                to: auth.role === 'admin' ? '/admin/verwaltung' : '/verwaltung'
+            },
             {
                 label: 'Form Layout',
                 icon: 'pi pi-fw pi-id-card',
@@ -104,12 +111,6 @@ const model = ref([
                 label: 'Free Blocks',
                 icon: 'pi pi-fw pi-eye',
                 to: '/blocks/free'
-            },
-            {
-                label: 'All Blocks',
-                icon: 'pi pi-fw pi-globe',
-                url: 'https://blocks.primevue.org/',
-                target: '_blank'
             }
         ]
     },
@@ -118,11 +119,6 @@ const model = ref([
         icon: 'pi pi-fw pi-briefcase',
         path: '/pages',
         items: [
-            {
-                label: 'Landing',
-                icon: 'pi pi-fw pi-globe',
-                to: '/landing'
-            },
             {
                 label: 'Auth',
                 icon: 'pi pi-fw pi-user',
@@ -146,117 +142,13 @@ const model = ref([
                 ]
             },
             {
-                label: 'Crud',
-                icon: 'pi pi-fw pi-pencil',
-                to: '/pages/crud'
-            },
-            {
                 label: 'Not Found',
                 icon: 'pi pi-fw pi-exclamation-circle',
                 to: '/pages/notfound'
-            },
-            {
-                label: 'Empty',
-                icon: 'pi pi-fw pi-circle-off',
-                to: '/pages/empty'
-            }
-        ]
-    },
-    {
-        label: 'Hierarchy',
-        icon: 'pi pi-fw pi-align-left',
-        path: '/hierarchy',
-        items: [
-            {
-                label: 'Submenu 1',
-                icon: 'pi pi-fw pi-align-left',
-                path: '/submenu_1',
-                items: [
-                    {
-                        label: 'Submenu 1.1',
-                        icon: 'pi pi-fw pi-align-left',
-                        path: '/submenu_1_1',
-                        items: [
-                            {
-                                label: 'Submenu 1.1.1',
-                                icon: 'pi pi-fw pi-align-left'
-                            },
-                            {
-                                label: 'Submenu 1.1.2',
-                                icon: 'pi pi-fw pi-align-left'
-                            },
-                            {
-                                label: 'Submenu 1.1.3',
-                                icon: 'pi pi-fw pi-align-left'
-                            }
-                        ]
-                    },
-                    {
-                        label: 'Submenu 1.2',
-                        icon: 'pi pi-fw pi-align-left',
-                        path: '/submenu_1_2',
-                        items: [
-                            {
-                                label: 'Submenu 1.2.1',
-                                icon: 'pi pi-fw pi-align-left'
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                label: 'Submenu 2',
-                icon: 'pi pi-fw pi-align-left',
-                path: '/submenu_2',
-                items: [
-                    {
-                        label: 'Submenu 2.1',
-                        icon: 'pi pi-fw pi-align-left',
-                        path: '/submenu_2_1',
-                        items: [
-                            {
-                                label: 'Submenu 2.1.1',
-                                icon: 'pi pi-fw pi-align-left'
-                            },
-                            {
-                                label: 'Submenu 2.1.2',
-                                icon: 'pi pi-fw pi-align-left'
-                            }
-                        ]
-                    },
-                    {
-                        label: 'Submenu 2.2',
-                        icon: 'pi pi-fw pi-align-left',
-                        path: '/submenu_2_2',
-                        items: [
-                            {
-                                label: 'Submenu 2.2.1',
-                                icon: 'pi pi-fw pi-align-left'
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        label: 'Get Started',
-        path: '/start',
-        items: [
-            {
-                label: 'Documentation',
-                icon: 'pi pi-fw pi-book',
-                to: '/start/documentation'
-            },
-            {
-                label: 'View Source',
-                icon: 'pi pi-fw pi-github',
-                url: 'https://github.com/primefaces/sakai-vue',
-                target: '_blank'
             }
         ]
     }
-]);
+])
 </script>
 
 <template>

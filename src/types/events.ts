@@ -1,0 +1,15 @@
+export type Event = {
+    id?: number,
+    title: string,
+    image?: string,
+    subtitle?: string,
+    description?: string,
+    category: string,
+    date: Date,
+    fullday?: boolean,
+    start?: Date,
+    end?: Date,
+    web?: string,
+    facebook?: string,
+    instagram?: string,
+}
