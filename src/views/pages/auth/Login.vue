@@ -1,8 +1,19 @@
-<script setup>
+<script setup lang="ts">
+import { LoginService } from '@/service/LoginService';
 import { ref } from 'vue'
 
 const email = ref('')
 const password = ref('')
+const invalid = ref(false)
+
+function submitLogin(): void {
+    const success = LoginService.login(email.value, password.value)
+    if (!success) {
+        invalid.value = true
+    } else {
+        invalid.value = false
+    }
+}
 </script>
 
 <template>
@@ -16,18 +27,22 @@ const password = ref('')
                         <span class="text-muted-color font-medium">Verwaltung Veranstaltungskalender</span>
                     </div>
 
-                    <div>
+                    <form @submit.prevent="submitLogin">
                         <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                        <InputText id="email1" type="text" placeholder="Email-Adresse" class="w-full md:w-[30rem] mb-8" v-model="email" />
+                        <InputText id="email1" type="text" placeholder="Email-Adresse" class="w-full md:w-[30rem] mb-8" v-model="email" :invalid="invalid" />
 
                         <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Passwort</label>
-                        <Password id="password1" v-model="password" placeholder="Passwort" :toggleMask="true" class="mb-4" fluid :feedback="false"></Password>
+                        <Password id="password1" v-model="password" placeholder="Passwort" :toggleMask="true" class="mb-4" fluid :feedback="false" :invalid="invalid"></Password>
 
                         <div class="flex items-center justify-between mt-2 mb-8 gap-8">
                             <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Passwort vergessen?</span>
                         </div>
-                        <Button label="Einloggen" class="w-full" as="router-link" to="/"></Button>
-                    </div>
+                        <Button label="Einloggen" class="w-full" type="submit"></Button>
+
+                        <div v-if="invalid" class="flex text-red-500 text-center justify-center mt-4">
+                            <span>Ungültige Anmeldedaten</span>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

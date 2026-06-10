@@ -5,6 +5,7 @@ import { EventService } from '@/service/EventService'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, ref } from 'vue'
+import { LoginService } from '@/service/LoginService'
 
 const toast = useToast()
 const events = ref<IEvent[]>([])
@@ -19,6 +20,7 @@ const filters = ref({
 const submitted = ref(false)
 
 onMounted(() => {
+    LoginService.checkAuth()
     events.value = EventService.getEvents()
 })
 
@@ -82,6 +84,10 @@ function deleteSelectedEvents() {
     selectedEvents.value = []
     toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
 }
+
+function onImgUpload(event: any): void {
+    console.log("Image uploaded", event)
+}
 </script>
 
 <template>
@@ -120,7 +126,8 @@ function deleteSelectedEvents() {
                 <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
                 <Column field="image" header="Bild" style="min-width: 10rem">
                     <template #body="slotProps">
-                        <img :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
+                        <img v-if="slotProps.data.image" :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
+                        <img v-else src="../../../public/images/img.svg" :alt="slotProps.data.name" class="w-24 rounded" />
                     </template>
                 </Column>
                 <Column field="veranstalter" header="Veranstalter" sortable style="min-width: 10rem"></Column>
@@ -140,7 +147,7 @@ function deleteSelectedEvents() {
             </DataTable>
         </div>
 
-        <EditEvent v-model:visible="eventDialog" :item="event!" @cancel="hideEditDialog" @save="saveEdit" />
+        <EditEvent v-model:visible="eventDialog" :item="event!" @cancel="hideEditDialog" @save="saveEdit" @upload="onImgUpload" />
 
         <Dialog v-model:visible="deleteDialog" :style="{ width: '450px' }" header="Löschen bestätigen" :modal="true">
             <div class="flex items-center gap-4">

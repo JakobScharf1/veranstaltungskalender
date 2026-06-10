@@ -7,7 +7,7 @@ const props = defineProps<{
     item: IEvent,
     visible: boolean,
 }>()
-const emits = defineEmits(['save', 'cancel', 'update:visible'])
+const emits = defineEmits(['save', 'cancel', 'update:visible', 'upload'])
 
 const localVisible = computed({
     get: () => props.visible,
@@ -20,7 +20,10 @@ const listStore = useListStore()
 <template>
     <Dialog v-model:visible="localVisible" @hide="emits('cancel')" :style="{ width: '450px' }" header="Veranstaltung Details" :modal="true">
         <div class="flex flex-col gap-6">
-            <img v-if="item.image" :src="item.image" class="block m-auto pb-4" />
+            <div>
+                <img v-if="item.image" :src="item.image" class="block m-auto pb-4" />
+                <FileUpload mode="basic" name="imageUpload" url="/api/upload" accept="image/*" :maxFileSize="1000000" @upload="emits('upload')" :auto="true" :chooseLabel="item.image ? 'Neues Bild hochladen' : 'Bild hochladen'" />
+            </div>
             <div>
                 <label for="name" class="block font-bold mb-3">Titel</label>
                 <InputText id="name" v-model.trim="item.title" required="true" autofocus fluid />

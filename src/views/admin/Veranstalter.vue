@@ -1,32 +1,32 @@
 <script setup lang="ts">
-import { EventService } from '@/service/EventService'
-import { IEvent } from '@/models/events'
 import { SelectChangeEvent, useToast } from 'primevue'
 import { onMounted, reactive, ref } from 'vue'
-import EditEvent from '@/components/EditEvent.vue'
+import { IUser } from '@/models/users'
+import { UserService } from '@/service/UserService'
+import { LoginService } from '@/service/LoginService'
 
 const toast = useToast()
 
-const events = ref<IEvent[]>([])
+const events = ref<IUser[]>([])
 
 const sortOptions = reactive([
-    { label: 'Titel', key: 'title' },
-    { label: 'Datum', key: 'date' },
-    { label: 'Veranstalter', key: 'veranstalter' }
+    { label: 'Name', key: 'name' },
+    { label: 'Email', key: 'email' },
+    { label: 'Rolle', key: 'role' }
 ])
-const sortKey = ref<string>('title')
+const sortKey = ref<string>('name')
 const sortOrder = ref<number>(1)
 
 const deleteDialog = ref<boolean>(false)
-const deleteEvent = ref<IEvent | null>(null)
+const deleteEvent = ref<IUser | null>(null)
 const editDialog = ref<boolean>(false)
-const editEvent = ref<IEvent | null>(null)
+const editEvent = ref<IUser | null>(null)
 
 function onSortChange(sortEvent: SelectChangeEvent): void {
     console.log('Event', sortEvent)
 }
 
-function openDeleteEvent(event: IEvent): void {
+function openDeleteEvent(event: IUser): void {
     deleteDialog.value = true
     deleteEvent.value = event
 }
@@ -34,10 +34,10 @@ function openDeleteEvent(event: IEvent): void {
 function confirmDelete(): void {
     deleteDialog.value = false
     events.value = events.value.filter((e) => e.id !== deleteEvent.value?.id)
-    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
+    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstalter gelöscht', life: 3000 })
 }
 
-function showEditEvent(event: IEvent): void {
+function showEditEvent(event: IUser): void {
     editDialog.value = true
     editEvent.value = event
 }
@@ -47,20 +47,21 @@ function hideEditEvent(): void {
     editEvent.value = null
 }
 
-function saveEdit(event: IEvent): void {
+function saveEdit(event: IUser): void {
     editDialog.value = false
-    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung aktualisiert', life: 3000 })
+    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstalter aktualisiert', life: 3000 })
 }
 
 onMounted(() => {
-    events.value = EventService.getEvents()
+    LoginService.checkAuth()
+    events.value = UserService.getUsers()
 })
 </script>
 
 <template>
     <div class="flex flex-col">
         <div class="card">
-            <div class="font-semibold text-xl">Veranstaltungen</div>
+            <div class="font-semibold text-xl">Veranstalter</div>
             <DataView :value="events" paginator :rows="15" :sortOrder="sortOrder" :sortField="sortKey">
                 <template #header>
                     <Select v-model="sortKey" :options="sortOptions" optionLabel="label" placeholder="Sortierung" @change="onSortChange($event)" />
@@ -70,17 +71,17 @@ onMounted(() => {
                     <div class="flex flex-col">
                         <div v-for="(item, index) in slotProps.items" :key="index">
                             <div class="flex flex-col sm:flex-row sm:items-center p-6 gap-4" :class="{ 'border-t border-surface': index !== 0 }">
-                                <div class="md:w-40 relative">
-                                    <img v-if="item.image" class="block xl:block mx-auto rounded w-full" :src="item.image" :alt="item.title" />
+                                <div class="md:w-20 relative">
+                                    <img v-if="item.image" class="block xl:block mx-auto rounded w-full" :src="item.image" :alt="item.name" />
+                                    <img v-else class="block xl:block mx-auto rounded w-full" src="../../../public/images/user.png" :alt="item.name">
                                 </div>
                                 <div class="flex flex-col md:flex-row justify-between md:items-center flex-1 gap-6">
                                     <div class="flex flex-row md:flex-col justify-between items-start gap-2">
                                         <div>
                                             <p class="font-medium text-sm text-surface-500 dark:text-surface-400">
-                                                <span class="">{{ item.category }} | </span>
-                                                <span class="font-small text-xs">Erstellt von {{ item.veranstalter }}</span>
+                                                <span>{{ item.email }}</span>
                                             </p>
-                                            <div class="text-lg font-medium mt-2">{{ item.title }}</div>
+                                            <div class="text-lg font-medium mt-2">{{ item.name }}</div>
                                         </div>
                                         <div class="bg-surface-100 p-1" style="border-radius: 30px">
                                             <div
@@ -92,7 +93,7 @@ onMounted(() => {
                                                         0px 1px 2px 0px rgba(0, 0, 0, 0.06);
                                                 "
                                             >
-                                                <span class="text-surface-900 font-medium text-sm">{{ EventService.formatDateToString(item.date) }}</span>
+                                                <span class="text-surface-900 font-medium text-sm">{{ item.role }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -115,7 +116,7 @@ onMounted(() => {
         <div class="flex items-center gap-4">
             <i class="pi pi-exclamation-triangle text-3xl!" />
             <span v-if="deleteEvent">
-                Bist du sicher, dass du die Veranstaltung <b>{{ deleteEvent.title }}</b> löschen willst?
+                Bist du sicher, dass du den Veranstalter <b>{{ deleteEvent.name }}</b> löschen willst?
             </span>
         </div>
         <template #footer>
@@ -124,5 +125,5 @@ onMounted(() => {
         </template>
     </Dialog>
 
-    <EditEvent v-model:visible="editDialog" :item="editEvent!" @cancel="hideEditEvent" @save="saveEdit" />
+    <!-- <EditEvent v-model:visible="editDialog" :item="editEvent!" @cancel="hideEditEvent" @save="saveEdit" /> -->
 </template>

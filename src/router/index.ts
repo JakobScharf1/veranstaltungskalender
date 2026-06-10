@@ -1,7 +1,7 @@
 import AppLayout from '@/layout/AppLayout.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
-const router = createRouter({
+export const router = createRouter({
     history: createWebHistory(),
     routes: [
         {
@@ -10,18 +10,27 @@ const router = createRouter({
             children: [
                 {
                     path: '/',
-                    name: 'dashboard',
-                    component: () => import('@/views/Dashboard.vue')
+                    redirect: '/termine'
                 },
                 {
-                    path: '/verwaltung',
-                    name: 'verwaltung',
-                    component: () => import('@/views/verwaltung/VerwaltungList.vue')
+                    path: '/termine',
+                    name: 'termine',
+                    component: () => import('@/views/verwaltung/TermineUser.vue')
                 },
                 {
-                    path: '/admin/verwaltung',
-                    name: 'adminverwaltung',
-                    component: () => import('@/views/admin/EventManager.vue')
+                    path: '/admin/termine',
+                    name: 'admintermine',
+                    component: () => import('@/views/admin/TermineAdmin.vue')
+                },
+                {
+                    path: '/admin/veranstalter',
+                    name: 'adminveranstalter',
+                    component: () => import('@/views/admin/Veranstalter.vue')
+                },
+                {
+                    path: '/orte',
+                    name: 'orte',
+                    component: () => import('@/views/verwaltung/OrteUser.vue')
                 },
                 {
                     path: '/uikit/formlayout',
@@ -99,11 +108,6 @@ const router = createRouter({
                     name: 'timeline',
                     component: () => import('@/views/uikit/TimelineDoc.vue')
                 },
-                {
-                    path: '/blocks/free',
-                    name: 'blocks',
-                    component: () => import('@/views/utilities/Blocks.vue')
-                }
             ]
         },
         {
