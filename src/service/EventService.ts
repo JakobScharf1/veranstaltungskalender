@@ -1,12 +1,16 @@
-import { Event } from "@/types/events"
+import { IEvent } from "@/models/events"
 
 export const EventService = {
-    getEvents(): Event[] {
+    getEvents(): IEvent[] {
         return MOCK_DATA
-    }
+    },
+    formatDateToString(date: Date): string {
+        const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
+        return date.toLocaleDateString('de-DE', options)
+    },
 }
 
-const MOCK_DATA: Event[] = [
+const MOCK_DATA: IEvent[] = [
     {
         id: 1,
         title: "Technikmuseum Sonderausstellung",

@@ -1,18 +1,18 @@
 <script setup lang="ts">
+import EditEvent from '@/components/EditEvent.vue'
+import { IEvent } from '@/models/events'
+import { EventService } from '@/service/EventService'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'
-import { onMounted, reactive, Ref, ref } from 'vue'
-import { Event } from '@/types/events'
-import { EventService } from '@/service/EventService'
-import EditEvent from '@/components/EditEvent.vue'
+import { onMounted, ref } from 'vue'
 
 const toast = useToast()
-const events: Ref<Array<Event | null>> = ref([])
+const events = ref<IEvent[]>([])
 const eventDialog = ref(false)
 const deleteDialog = ref(false)
 const deleteMultiDialog = ref(false)
-const event: Ref<Event | null> = ref(null)
-const selectedEvents = ref()
+const event = ref<IEvent | null>(null)
+const selectedEvents = ref<IEvent[]>([])
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 })
@@ -28,17 +28,20 @@ function openNew(): void {
     eventDialog.value = true
 }
 
-function hideDialog(): void {
+function hideEditDialog(): void {
     eventDialog.value = false
     submitted.value = false
 }
 
-function saveEvent(): void {
+function saveEdit(): void {
     submitted.value = true
 
-    if (event?.value.title?.trim()) {
+    if (!event.value) {
+        toast.add({ severity: 'error', summary: 'Fehler', detail: 'Titel darf nicht leer sein', life: 3000 })
+    } else {
+        if (event?.value.title?.trim()) {
         if (event.value.id) {
-            events.value.find((item) => item.id === event.value.id)
+            events.value.find((item) => item.id === event.value!.id)
             toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung aktualisiert', life: 3000 })
         } else {
             event.value.image = 'product-placeholder.svg'
@@ -49,33 +52,34 @@ function saveEvent(): void {
         eventDialog.value = false
         event.value = null
     }
+    }
 }
 
-function editEvent(ev: Event): void {
+function editEvent(ev: IEvent): void {
     event.value = { ...ev }
     eventDialog.value = true
 }
 
-function confirmDelete(ev: Event): void {
+function confirmDelete(ev: IEvent): void {
     event.value = ev
     deleteDialog.value = true
 }
 
 function deleteEvent(): void {
-    events.value = events.value.filter((val) => val.id !== event.value.id)
+    events.value = events.value.filter((val) => val.id !== event.value!.id)
     deleteDialog.value = false
     event.value = null
     toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
 }
 
 function confirmDeleteSelected() {
-    deleteDialog.value = true
+    deleteMultiDialog.value = true
 }
 
 function deleteSelectedEvents() {
     events.value = events.value.filter((val) => !selectedEvents.value.includes(val))
     deleteMultiDialog.value = false
-    selectedEvents.value = null
+    selectedEvents.value = []
     toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
 }
 </script>
@@ -100,7 +104,7 @@ function deleteSelectedEvents() {
                 :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Zeige {first} bis {last} von {totalRecords} Veranstaltungen"
+                currentPageReportTemplate="Zeige {first} bis {last} von {totalRecords}"
             >
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -114,9 +118,18 @@ function deleteSelectedEvents() {
                 </template>
 
                 <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
+                <Column field="image" header="Bild" style="min-width: 10rem">
+                    <template #body="slotProps">
+                        <img :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
+                    </template>
+                </Column>
                 <Column field="veranstalter" header="Veranstalter" sortable style="min-width: 10rem"></Column>
-                <Column field="datum" header="Datum" sortable style="min-width: 10rem"></Column>
-                <Column field="name" header="Titel" sortable style="min-width: 16rem"></Column>
+                <Column field="date" header="Datum" sortable style="min-width: 10rem">
+                    <template #body="slotProps">
+                        {{ EventService.formatDateToString(slotProps.data.date) }}
+                    </template>
+                </Column>
+                <Column field="title" header="Titel" sortable style="min-width: 16rem"></Column>
                 <Column field="category" header="Kategorie" sortable style="min-width: 10rem"></Column>
                 <Column :exportable="false" style="min-width: 12rem">
                     <template #body="slotProps">
@@ -127,30 +140,29 @@ function deleteSelectedEvents() {
             </DataTable>
         </div>
 
-        <EditEvent v-if="eventDialog" :item="event" />
+        <EditEvent v-model:visible="eventDialog" :item="event!" @cancel="hideEditDialog" @save="saveEdit" />
 
-        <Dialog v-model:visible="deleteDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+        <Dialog v-model:visible="deleteDialog" :style="{ width: '450px' }" header="Löschen bestätigen" :modal="true">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle text-3xl!" />
-                <span v-if="event"
-                    >Bist du sicher, dass du die Veranstaltung <b>{{ event.title }} löschen willst?</b
-                    >?</span
-                >
+                <span v-if="event">
+                    Bist du sicher, dass du die Veranstaltung <b>{{ event.title }}</b> löschen willst?
+                </span>
             </div>
             <template #footer>
-                <Button label="No" icon="pi pi-times" text @click="deleteDialog = false" />
-                <Button label="Yes" icon="pi pi-check" @click="deleteEvent" />
+                <Button label="Nein" icon="pi pi-times" text @click="deleteDialog = false" />
+                <Button label="Ja" icon="pi pi-check" @click="deleteEvent" />
             </template>
         </Dialog>
 
-        <Dialog v-model:visible="deleteMultiDialog" :style="{ width: '450px' }" header="Confirm" :modal="true">
+        <Dialog v-model:visible="deleteMultiDialog" :style="{ width: '450px' }" header="Löschen bestätigen" :modal="true">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle text-3xl!" />
-                <span v-if="event">Bist du sicher, dass du die ausgewählten Veranstaltungen löschen willst?</span>
+                <span v-if="selectedEvents && selectedEvents.length">Bist du sicher, dass du die ausgewählten Veranstaltungen löschen willst?</span>
             </div>
             <template #footer>
-                <Button label="No" icon="pi pi-times" text @click="deleteMultiDialog = false" />
-                <Button label="Yes" icon="pi pi-check" text @click="deleteSelectedEvents" />
+                <Button label="Nein" icon="pi pi-times" text @click="deleteMultiDialog = false" />
+                <Button label="Ja" icon="pi pi-check" text @click="deleteSelectedEvents" />
             </template>
         </Dialog>
     </div>

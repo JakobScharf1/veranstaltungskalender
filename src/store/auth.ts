@@ -4,7 +4,7 @@ export const useAuthStore = defineStore('auth', {
     state: () => {
         return {
             username: '',
-            role: 'admin'
+            role: 'user'
         }
     },
     actions: {

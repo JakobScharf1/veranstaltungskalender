@@ -1,54 +1,67 @@
 <script setup lang="ts">
-import { ProductService } from '@/service/ProductService'
-import { SelectChangeEvent } from 'primevue'
+import { EventService } from '@/service/EventService'
+import { IEvent } from '@/models/events'
+import { SelectChangeEvent, useToast } from 'primevue'
 import { onMounted, reactive, ref } from 'vue'
+import EditEvent from '@/components/EditEvent.vue'
 
-const products = ref(null)
-const picklistProducts = ref(null)
-const orderlistProducts = ref(null)
+const toast = useToast()
+
+const events = ref<IEvent[]>([])
 
 const sortOptions = reactive([
     { label: 'Titel', key: 'title' },
-    { label: 'Erstellungsdatum', key: 'created_at' },
-    { label: 'Benutzer', key: 'user' }
+    { label: 'Datum', key: 'date' },
+    { label: 'Veranstalter', key: 'veranstalter' }
 ])
 const sortKey = ref<string>('title')
 const sortOrder = ref<number>(1)
+
+const deleteDialog = ref<boolean>(false)
+const deleteEvent = ref<IEvent | null>(null)
+const editDialog = ref<boolean>(false)
+const editEvent = ref<IEvent | null>(null)
 
 function onSortChange(sortEvent: SelectChangeEvent): void {
     console.log('Event', sortEvent)
 }
 
-onMounted(() => {
-    ProductService.getProductsSmall().then((data) => {
-        products.value = data.slice(0, 6)
-        picklistProducts.value = [data, []]
-        orderlistProducts.value = data
-    })
-})
-
-function getSeverity(product) {
-    switch (product.inventoryStatus) {
-        case 'ANSTEHEND':
-            return 'success'
-
-        case 'VERGANGEN':
-            return 'warning'
-
-        case 'ARCHIVIERT':
-            return 'danger'
-
-        default:
-            return null
-    }
+function openDeleteEvent(event: IEvent): void {
+    deleteDialog.value = true
+    deleteEvent.value = event
 }
+
+function confirmDelete(): void {
+    deleteDialog.value = false
+    events.value = events.value.filter((e) => e.id !== deleteEvent.value?.id)
+    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
+}
+
+function showEditEvent(event: IEvent): void {
+    editDialog.value = true
+    editEvent.value = event
+}
+
+function hideEditEvent(): void {
+    editDialog.value = false
+    editEvent.value = null
+}
+
+function saveEdit(event: IEvent): void {
+    editDialog.value = false
+    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung aktualisiert', life: 3000 })
+}
+
+onMounted(() => {
+    events.value = EventService.getEvents()
+})
 </script>
 
 <template>
     <div class="flex flex-col">
         <div class="card">
             <div class="font-semibold text-xl">Veranstaltungen</div>
-            <DataView :value="products" paginator :rows="15" :sortOrder="sortOrder" :sortField="sortKey">
+            <DataView :value="events" paginator :rows="15" :sortOrder="sortOrder" :sortField="sortKey">
                 <template #header>
                     <Select v-model="sortKey" :options="sortOptions" optionLabel="label" placeholder="Sortierung" @change="onSortChange($event)" />
                 </template>
@@ -58,17 +71,16 @@ function getSeverity(product) {
                         <div v-for="(item, index) in slotProps.items" :key="index">
                             <div class="flex flex-col sm:flex-row sm:items-center p-6 gap-4" :class="{ 'border-t border-surface': index !== 0 }">
                                 <div class="md:w-40 relative">
-                                    <img class="block xl:block mx-auto rounded w-full" :src="`https://primefaces.org/cdn/primevue/images/product/${item.image}`" :alt="item.name" />
-                                    <Tag :value="item.inventoryStatus" :severity="getSeverity(item)" class="absolute dark:bg-surface-900!" style="left: 4px; top: 4px"></Tag>
+                                    <img v-if="item.image" class="block xl:block mx-auto rounded w-full" :src="item.image" :alt="item.title" />
                                 </div>
                                 <div class="flex flex-col md:flex-row justify-between md:items-center flex-1 gap-6">
                                     <div class="flex flex-row md:flex-col justify-between items-start gap-2">
                                         <div>
                                             <p class="font-medium text-sm text-surface-500 dark:text-surface-400">
-                                                <span class="">KATEGORIE | </span>
-                                                <span class="font-small text-xs">Erstellt von USERNAME</span>
+                                                <span class="">{{ item.category }} | </span>
+                                                <span class="font-small text-xs">Erstellt von {{ item.veranstalter }}</span>
                                             </p>
-                                            <div class="text-lg font-medium mt-2">TITEL</div>
+                                            <div class="text-lg font-medium mt-2">{{ item.title }}</div>
                                         </div>
                                         <div class="bg-surface-100 p-1" style="border-radius: 30px">
                                             <div
@@ -80,14 +92,14 @@ function getSeverity(product) {
                                                         0px 1px 2px 0px rgba(0, 0, 0, 0.06);
                                                 "
                                             >
-                                                <span class="text-surface-900 font-medium text-sm">DATUM</span>
+                                                <span class="text-surface-900 font-medium text-sm">{{ EventService.formatDateToString(item.date) }}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="flex flex-col md:items-end gap-8">
                                         <div class="flex flex-row-reverse md:flex-row gap-2">
-                                            <Button icon="pi pi-trash" severity="danger" rounded outlined />
-                                            <Button icon="pi pi-pencil" rounded></Button>
+                                            <Button icon="pi pi-trash" severity="danger" rounded outlined @click="openDeleteEvent(item)" />
+                                            <Button icon="pi pi-pencil" rounded @click="showEditEvent(item)"></Button>
                                         </div>
                                     </div>
                                 </div>
@@ -98,4 +110,19 @@ function getSeverity(product) {
             </DataView>
         </div>
     </div>
+
+    <Dialog v-model:visible="deleteDialog" :style="{ width: '450px' }" header="Löschen bestätigen" :modal="true">
+        <div class="flex items-center gap-4">
+            <i class="pi pi-exclamation-triangle text-3xl!" />
+            <span v-if="deleteEvent">
+                Bist du sicher, dass du die Veranstaltung <b>{{ deleteEvent.title }}</b> löschen willst?
+            </span>
+        </div>
+        <template #footer>
+            <Button label="Nein" icon="pi pi-times" text @click="deleteDialog = false" />
+            <Button label="Ja" icon="pi pi-check" @click="confirmDelete()" />
+        </template>
+    </Dialog>
+
+    <EditEvent v-model:visible="editDialog" :item="editEvent!" @cancel="hideEditEvent" @save="saveEdit" />
 </template>

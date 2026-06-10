@@ -1,21 +1,26 @@
 <script setup lang="ts">
-import { useListStore } from '@/store/lists';
-import { Event } from '@/types/events';
+import { IEvent } from '@/models/events'
+import { useListStore } from '@/store/lists'
+import { computed } from 'vue';
 
 const props = defineProps<{
-    item: Event,
+    item: IEvent,
+    visible: boolean,
 }>()
-const emits = defineEmits(['save', 'cancel'])
+const emits = defineEmits(['save', 'cancel', 'update:visible'])
 
-let active = true
+const localVisible = computed({
+    get: () => props.visible,
+    set: (val) => emits('update:visible', val)
+})
 
 const listStore = useListStore()
 </script>
 
 <template>
-    <Dialog v-model:visible="active" :style="{ width: '450px' }" header="Veranstaltung Details" :modal="true">
+    <Dialog v-model:visible="localVisible" @hide="emits('cancel')" :style="{ width: '450px' }" header="Veranstaltung Details" :modal="true">
         <div class="flex flex-col gap-6">
-            <img v-if="item.image" :src="`https://primefaces.org/cdn/primevue/images/product/${item.image}`" class="block m-auto pb-4" />
+            <img v-if="item.image" :src="item.image" class="block m-auto pb-4" />
             <div>
                 <label for="name" class="block font-bold mb-3">Titel</label>
                 <InputText id="name" v-model.trim="item.title" required="true" autofocus fluid />
