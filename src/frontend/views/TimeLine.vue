@@ -45,10 +45,8 @@
 
     </template>
 
-    <template #empty>
-      <div class="w-100 flex justify-content-center">
-        <p>Keine Veranstaltungen gefunden.</p>
-      </div>
+    <template #empty class="justify-content-center">
+      <p class="text-center py-4">Keine Veranstaltungen gefunden.</p>
     </template>
 
   </DataView>

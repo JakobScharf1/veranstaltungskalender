@@ -1,4 +1,5 @@
 import AppLayout from '@/admin/layout/AppLayout.vue'
+import Layout from '@/frontend/FrontendLayout.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 export const router = createRouter({
@@ -6,7 +7,13 @@ export const router = createRouter({
     routes: [
         {
             path: '/',
-            component: () => import('@/frontend/views/TimeLine.vue')
+            component: Layout,
+            children: [
+                {
+                    path: '',
+                    component: () => import('@/frontend/views/TimeLine.vue')
+                },
+            ],
         },
 
         {

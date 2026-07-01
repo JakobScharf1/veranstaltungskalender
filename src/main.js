@@ -10,6 +10,7 @@ import ToastService from 'primevue/toastservice'
 import '@/admin/assets/styles.scss'
 import '@/admin/assets/tailwind.css'
 import { createPinia } from 'pinia'
+import 'primeflex/primeflex.css'
 
 const app = createApp(App)
 const pinia = createPinia()

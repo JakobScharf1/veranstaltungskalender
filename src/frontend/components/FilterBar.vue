@@ -92,7 +92,7 @@
 
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { FilterOption } from '@/types';
+import type { FilterOption } from '@/frontend/types';
 import { computed, inject, reactive, ref, watch, type Ref } from 'vue';
 
 const isMobile = inject<Ref<string>>("isMobile")
