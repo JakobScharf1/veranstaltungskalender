@@ -7,8 +7,8 @@ import PrimeVue from 'primevue/config'
 import ConfirmationService from 'primevue/confirmationservice'
 import ToastService from 'primevue/toastservice'
 
-import '@/assets/styles.scss'
-import '@/assets/tailwind.css'
+import '@/admin/assets/styles.scss'
+import '@/admin/assets/tailwind.css'
 import { createPinia } from 'pinia'
 
 const app = createApp(App)
