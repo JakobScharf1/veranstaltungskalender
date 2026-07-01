@@ -73,7 +73,7 @@ onMounted(() => {
                             <div class="flex flex-col sm:flex-row sm:items-center p-6 gap-4" :class="{ 'border-t border-surface': index !== 0 }">
                                 <div class="md:w-20 relative">
                                     <img v-if="item.image" class="block xl:block mx-auto rounded w-full" :src="item.image" :alt="item.name" />
-                                    <img v-else class="block xl:block mx-auto rounded w-full" src="../../../public/images/user.png" :alt="item.name">
+                                    <img v-else class="block xl:block mx-auto rounded w-full" src="../../../../public/images/user.png" :alt="item.name">
                                 </div>
                                 <div class="flex flex-col md:flex-row justify-between md:items-center flex-1 gap-6">
                                     <div class="flex flex-row md:flex-col justify-between items-start gap-2">
