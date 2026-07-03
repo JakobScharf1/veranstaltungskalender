@@ -128,7 +128,7 @@ function onImgUpload(event: any): void {
                 <Column field="image" header="Bild" style="min-width: 10rem">
                     <template #body="slotProps">
                         <img v-if="slotProps.data.image" :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
-                        <img v-else src="../../../../public/images/img.svg" :alt="slotProps.data.name" class="w-24 rounded" />
+                        <img v-else src="../../../public/images/img.svg" :alt="slotProps.data.name" class="w-24 rounded" />
                     </template>
                 </Column>
                 <Column field="veranstalter" header="Veranstalter" sortable style="min-width: 10rem"></Column>
