@@ -26,7 +26,7 @@ const logout = () => {
             </button>
             <router-link to="/" class="layout-topbar-logo">
                 <img src="/images/logo.png" class="h-11 w-auto" />
-                <span class="text-lg">Terminverwaltung</span>
+                <span class="text-lg">Veranstaltungsverwaltung</span>
             </router-link>
         </div>
 
