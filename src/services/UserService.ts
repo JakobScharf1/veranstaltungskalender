@@ -1,4 +1,4 @@
-import { IUser } from "@/admin/models/users"
+import { IUser } from "@/models/user"
 
 export const UserService = {
     getUsers(): IUser[] {

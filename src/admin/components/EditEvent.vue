@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { IEvent } from '@/models/events'
+import { IEvent } from '@/models/veranstaltung'
 import { useListStore } from '@/store/lists'
-import { computed } from 'vue';
+import { computed } from 'vue'
 
 const props = defineProps<{
-    item: IEvent,
-    visible: boolean,
+    item: IEvent
+    visible: boolean
 }>()
 const emits = defineEmits(['save', 'cancel', 'update:visible', 'upload'])
 

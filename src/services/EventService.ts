@@ -1,4 +1,4 @@
-import { IEvent } from "@/admin/models/events"
+import { IEvent } from "@/models/veranstaltung"
 
 export const EventService = {
     getEvents(): IEvent[] {

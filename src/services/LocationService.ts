@@ -1,4 +1,4 @@
-import { ILocation } from "@/admin/models/locations"
+import { ILocation } from "@/models/locations"
 
 
 export const LocationService = {

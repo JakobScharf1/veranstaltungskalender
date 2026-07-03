@@ -1,19 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import AppMenuItem from './AppMenuItem.vue'
 import { useAuthStore } from '@/store/auth.ts'
+import { ref, watch } from 'vue'
+import AppMenuItem from './AppMenuItem.vue'
 
 const auth = useAuthStore()
-
-onMounted(() => {
-    if (auth.role === 'admin') {
-        model.value[0].items.push({
-            label: 'Veranstalter',
-            icon: 'pi pi-fw pi-users',
-            to: '/mgmt/admin/veranstalter',
-        })
-    }
-})
 
 const model = ref([
     {
@@ -22,16 +12,38 @@ const model = ref([
             {
                 label: 'Termine',
                 icon: 'pi pi-fw pi-calendar',
-                to: auth.role === 'admin' ? '/mgmt/admin/termine' : '/mgmt/termine'
+                to: '/mgmt/termine'
             },
             {
                 label: 'Orte',
                 icon: 'pi pi-fw pi-map',
-                to: auth.role === 'admin' ? '/mgmt/admin/orte' : '/mgmt/orte'
+                to: '/mgmt/orte'
             }
         ]
-    },
+    }
 ])
+
+watch(
+    () => auth.admin,
+    (isAdmin) => {
+        const rootItems = model.value[0]?.items ?? []
+        const hasVeranstalter = rootItems.some((item) => item.to === '/mgmt/veranstalter')
+
+        if (isAdmin && !hasVeranstalter) {
+            rootItems.push({
+                label: 'Veranstalter',
+                icon: 'pi pi-fw pi-users',
+                to: '/mgmt/veranstalter'
+            })
+        } else if (!isAdmin && hasVeranstalter) {
+            const index = rootItems.findIndex((item) => item.to === '/mgmt/veranstalter')
+            if (index >= 0) {
+                rootItems.splice(index, 1)
+            }
+        }
+    },
+    { immediate: true }
+)
 </script>
 
 <template>

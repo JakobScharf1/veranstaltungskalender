@@ -1,5 +1,6 @@
 import AppLayout from '@/admin/layout/AppLayout.vue'
 import Layout from '@/frontend/FrontendLayout.vue'
+import { useAuthStore } from '@/store/auth'
 import { createRouter, createWebHistory } from 'vue-router'
 
 export const router = createRouter({
@@ -25,49 +26,66 @@ export const router = createRouter({
                     redirect: '/mgmt/termine'
                 },
                 {
-                    path: 'termine',
+                    path: '/mgmt/termine',
                     name: 'termine',
-                    component: () => import('@/admin/views/verwaltung/TermineUser.vue')
+                    component: () => import('@/admin/views/Termine.vue')
                 },
                 {
-                    path: 'admin/termine',
-                    name: 'admintermine',
-                    component: () => import('@/admin/views/admin/TermineAdmin.vue')
-                },
-                {
-                    path: 'admin/veranstalter',
+                    path: '/mgmt/veranstalter',
                     name: 'adminveranstalter',
-                    component: () => import('@/admin/views/admin/Veranstalter.vue')
+                    component: () => import('@/admin/views/Veranstalter.vue')
                 },
                 {
-                    path: 'orte',
+                    path: '/mgmt/orte',
                     name: 'orte',
-                    component: () => import('@/admin/views/verwaltung/OrteUser.vue')
+                    component: () => import('@/admin/views/Orte.vue')
                 },
             ]
         },
         {
             path: '/notfound',
             name: 'notfound',
-            component: () => import('@/admin/views/pages/NotFound.vue')
+            component: () => import('@/admin/views/NotFound.vue')
         },
 
         {
             path: '/auth/login',
             name: 'login',
-            component: () => import('@/admin/views/pages/auth/Login.vue')
+            component: () => import('@/admin/views/auth/Login.vue')
         },
         {
             path: '/auth/access',
             name: 'accessDenied',
-            component: () => import('@/admin/views/pages/auth/Access.vue')
+            component: () => import('@/admin/views/auth/Access.vue')
         },
         {
             path: '/auth/error',
             name: 'error',
-            component: () => import('@/admin/views/pages/auth/Error.vue')
+            component: () => import('@/admin/views/auth/Error.vue')
         }
     ]
+})
+
+router.beforeEach((to, _from, next) => {
+    const authStore = useAuthStore()
+    const isPublicRoute = to.path === '/' || to.path.startsWith('/auth') || to.path === '/notfound'
+
+    if (to.path.startsWith('/mgmt') && !authStore.token) {
+        next({ name: 'login' })
+        return
+    }
+
+    if (to.name === 'login' && authStore.token) {
+        next({ path: '/mgmt' })
+        return
+    }
+
+    if (!isPublicRoute && !authStore.token) {
+        next({ name: 'login' })
+        return
+    }
+
+    next()
 })
 
 export default router

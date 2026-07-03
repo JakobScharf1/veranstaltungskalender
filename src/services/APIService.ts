@@ -1,9 +1,11 @@
-const BASE_URL = 'http://localhost:8000'
+import { useAuthStore } from '@/store/auth'
+
+const BASE_URL = 'https://api.wannefredder.de'
 
 type RequestOptions = {
   params?: Record<string, string | number | boolean | null | undefined>
   headers?: Record<string, string>
-  signal?: AbortSignal
+  useAuthToken?: boolean
 }
 
 type ApiResponse<T> = {
@@ -33,17 +35,23 @@ async function request<T>(
     }
   }
 
+  const authStore = useAuthStore()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  }
+
+  if (options.useAuthToken && authStore.token) {
+    headers.Authorization = `Bearer ${authStore.token}`
+  }
+
   const response = await fetch(url.toString(), {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal: options.signal,
   })
 
-  if (!response.ok) {
+  if (response.status !== 200 && response.status !== 201 && response.status !== 204) {
     throw new ApiError(response.status, response.statusText)
   }
 

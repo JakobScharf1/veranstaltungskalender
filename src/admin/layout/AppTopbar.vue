@@ -1,14 +1,11 @@
 <script setup>
-import { useLayout } from '@/admin/layout/composables/layout';
-import { useAuthStore } from '@/store/auth';
-import { useRouter } from 'vue-router';
-import { Popover } from 'primevue';
-import { ref } from 'vue';
-import { LoginService } from '@/admin/service/LoginService';
+import { useLayout } from '@/admin/layout/composables/layout'
+import { useAuthStore } from '@/store/auth'
+import { Popover } from 'primevue'
+import { ref } from 'vue'
 
-const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
-const authStore = useAuthStore();
-const router = useRouter();
+const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout()
+const authStore = useAuthStore()
 
 const profilePopover = ref()
 
@@ -17,7 +14,7 @@ const toggleProfilePopover = (event) => {
 }
 
 const logout = () => {
-    LoginService.logout()
+    authStore.logout()
 }
 </script>
 
@@ -58,7 +55,8 @@ const logout = () => {
                         <div class="flex flex-col gap-3 p-2 w-48">
                             <div class="flex flex-col gap-1">
                                 <span class="font-semibold text-sm">{{ authStore.username }}</span>
-                                <span class="text-xs text-surface-500">{{ authStore.role }}</span>
+                                <span v-if="authStore.admin" class="text-xs text-surface-500">Admin</span>
+                                <span v-else class="text-xs text-surface-500">Benutzer</span>
                             </div>
                             <Button label="Logout" icon="pi pi-sign-out" severity="danger" text size="small" @click="logout" />
                         </div>

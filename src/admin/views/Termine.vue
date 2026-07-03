@@ -1,31 +1,32 @@
 <script setup lang="ts">
 import EditEvent from '@/admin/components/EditEvent.vue'
-import { IEvent } from '@/admin/models/events'
-import { EventService } from '@/admin/service/EventService'
+import { ITermin } from '@/models/termin'
+import { EventService } from '@/services/EventService'
+import { useAuthStore } from '@/store/auth'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, ref } from 'vue'
-import { LoginService } from '@/admin/service/LoginService'
 
 const toast = useToast()
-const events = ref<IEvent[]>([])
+const events = ref<ITermin[]>([])
 const eventDialog = ref(false)
 const deleteDialog = ref(false)
 const deleteMultiDialog = ref(false)
-const event = ref<IEvent | null>(null)
-const selectedEvents = ref<IEvent[]>([])
+const event = ref<ITermin | null>(null)
+const selectedEvents = ref<ITermin[]>([])
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 })
 const submitted = ref(false)
+const authStore = useAuthStore()
 
 onMounted(() => {
-    LoginService.checkAuth()
+    authStore.fetchUser()
     events.value = EventService.getEvents()
 })
 
 function openNew(): void {
-    event.value = { title: "", category: "", date: new Date() }
+    event.value = null
     submitted.value = false
     eventDialog.value = true
 }
@@ -41,28 +42,28 @@ function saveEdit(): void {
     if (!event.value) {
         toast.add({ severity: 'error', summary: 'Fehler', detail: 'Titel darf nicht leer sein', life: 3000 })
     } else {
-        if (event?.value.title?.trim()) {
-        if (event.value.id) {
-            events.value.find((item) => item.id === event.value!.id)
-            toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung aktualisiert', life: 3000 })
-        } else {
-            event.value.image = 'product-placeholder.svg'
-            events.value.push(event.value)
-            toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung erstellt', life: 3000 })
-        }
+        if (event.value?.veranstaltung.titel?.trim()) {
+            if (event.value.id) {
+                events.value.find((item) => item.id === event.value!.id)
+                toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung aktualisiert', life: 3000 })
+            } else {
+                event.value.veranstaltung.picture1 = 'product-placeholder.svg'
+                events.value.push(event.value)
+                toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung erstellt', life: 3000 })
+            }
 
-        eventDialog.value = false
-        event.value = null
-    }
+            eventDialog.value = false
+            event.value = null
+        }
     }
 }
 
-function editEvent(ev: IEvent): void {
+function editEvent(ev: ITermin): void {
     event.value = { ...ev }
     eventDialog.value = true
 }
 
-function confirmDelete(ev: IEvent): void {
+function confirmDelete(ev: ITermin): void {
     event.value = ev
     deleteDialog.value = true
 }
@@ -86,7 +87,7 @@ function deleteSelectedEvents() {
 }
 
 function onImgUpload(event: any): void {
-    console.log("Image uploaded", event)
+    console.log('Image uploaded', event)
 }
 </script>
 
@@ -153,7 +154,7 @@ function onImgUpload(event: any): void {
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle text-3xl!" />
                 <span v-if="event">
-                    Bist du sicher, dass du die Veranstaltung <b>{{ event.title }}</b> löschen willst?
+                    Bist du sicher, dass du die Veranstaltung <b>{{ event.veranstaltung.titel }}</b> löschen willst?
                 </span>
             </div>
             <template #footer>

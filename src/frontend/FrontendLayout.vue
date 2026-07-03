@@ -1,8 +1,9 @@
 <template>
-    <div class="flex justify-center my-4">
-      <SelectButton v-model="selectedView" :options="options" optionLabel="label" optionValue="val"></SelectButton>
+    <div class="relative flex justify-center items-center my-4">
+      <SelectButton v-model="selectedView" :options="options" optionLabel="label" optionValue="val" class="clickable"></SelectButton>
+      <RouterLink to="/auth/login" class="absolute right-10 cursor-pointer"><i class="pi pi-user"></i></RouterLink>
     </div>
-      <CalendarView v-if="selectedView === 'calendar'" />
+    <CalendarView v-if="selectedView === 'calendar'" />
     <TimeLine v-if="selectedView === 'list'" />
 </template>
 

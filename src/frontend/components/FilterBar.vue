@@ -34,9 +34,9 @@
 
             <div v-else-if="pendingFilter.type === 'daterange'" class="flex flex-column gap-2">
               <label class="filter-input-label">Von</label>
-              <DatePicker v-model="pendingValue.von" dateFormat="yy-mm-dd" class="w-full" />
+              <DatePicker v-model="pendingValue.von" dateFormat="dd.mm.yy" class="w-full" />
               <label class="filter-input-label">Bis</label>
-              <DatePicker v-model="pendingValue.bis" dateFormat="yy-mm-dd" class="w-full" />
+              <DatePicker v-model="pendingValue.bis" dateFormat="dd.mm.yy" class="w-full" />
             </div>
 
             <Select
