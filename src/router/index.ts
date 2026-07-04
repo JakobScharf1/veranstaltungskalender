@@ -43,6 +43,11 @@ export const router = createRouter({
             ]
         },
         {
+            path: '/termin/:id',
+            name: 'terminDetails',
+            component: () => import('@/frontend/views/TerminDetails.vue')
+        },
+        {
             path: '/notfound',
             name: 'notfound',
             component: () => import('@/admin/views/NotFound.vue')
@@ -68,7 +73,6 @@ export const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
     const authStore = useAuthStore()
-    const isPublicRoute = to.path === '/' || to.path.startsWith('/auth') || to.path === '/notfound'
 
     if (to.path.startsWith('/mgmt') && !authStore.token) {
         next({ name: 'login' })
@@ -77,11 +81,6 @@ router.beforeEach((to, _from, next) => {
 
     if (to.name === 'login' && authStore.token) {
         next({ path: '/mgmt' })
-        return
-    }
-
-    if (!isPublicRoute && !authStore.token) {
-        next({ name: 'login' })
         return
     }
 

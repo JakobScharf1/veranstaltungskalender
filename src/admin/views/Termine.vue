@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import EditEvent from '@/admin/components/EditEvent.vue'
 import { ITermin } from '@/models/termin'
-import { EventService } from '@/services/EventService'
+import { EventService } from '@/services/TermineService'
 import { useAuthStore } from '@/store/auth'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'

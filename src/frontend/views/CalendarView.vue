@@ -1,5 +1,6 @@
 <template>
     <div class="kalender-wrapper">
+
         <!-- Navigation -->
         <div class="kalender-header">
             <Button icon="fa-solid fa-chevron-left" text rounded @click="prevMonth" />
@@ -7,8 +8,13 @@
             <Button icon="fa-solid fa-chevron-right" text rounded @click="nextMonth" />
         </div>
 
+        <div v-if="loading" class="loading-state">
+            <ProgressSpinner />
+            <p>Details werden geladen...</p>
+        </div>
+
         <!-- Wochentag-Header -->
-        <div class="kalender-grid">
+        <div v-else class="kalender-grid">
             <div v-for="tag in wochentage" :key="tag" class="kalender-wochentag">
                 {{ tag }}
             </div>
@@ -42,32 +48,19 @@
     <!-- Detail Drawer für einen Tag -->
     <Drawer v-model:visible="drawerVisible" :header="drawerHeader" position="right" style="width: 26rem">
         <div class="drawer-events">
-            <div v-for="event in selectedEvents" :key="event.id" class="drawer-event-card">
-                <img :src="event.veranstaltung.picture1" class="drawer-event-img" :alt="event.veranstaltung.titel" />
-                <div class="drawer-event-body">
-                    <Tag :value="event.veranstaltung.kategorie.name" rounded class="mb-2" />
-                    <h3 class="drawer-event-titel">{{ event.veranstaltung.titel }}</h3>
-                    <div class="drawer-event-meta">
-                        <span v-if="event.allday"><i class="pi pi-clock"></i> Ganztägig</span>
-                        <span v-else><i class="pi pi-clock"></i> {{ event.start }} – {{ event.ende ?? event.start }}</span>
-                        <span><i class="pi pi-map-marker"></i> {{ event.veranstaltung.ort.bezeichnung }}, {{ event.veranstaltung.ort.adresse.ort }}</span>
-                        <span v-if="!event.veranstaltung.kostenlos"><i class="pi pi-ticket"></i></span>
-                        <span v-else><i class="pi pi-ticket"></i>Eintritt frei</span>
-                    </div>
-                    <p class="drawer-event-beschreibung">{{ event.veranstaltung?.info }}</p>
-                    <RouterLink :to="`/termin/${event.id}`" class="w-full">
-                        <Button label="Mehr Details" class="w-full" size="small" />
-                    </RouterLink>
-                </div>
-            </div>
+            <TerminCard v-for="event in selectedEvents" :key="event.id" :item="event"></TerminCard>
         </div>
     </Drawer>
 </template>
 
 <script setup lang="ts">
 import { ITermin } from '@/models/termin'
-import { ApiService, type ApiResponse } from '@/services/APIService'
+import { ApiService } from '@/services/APIService'
+import { formatDate } from '@/services/Helper'
 import { computed, onMounted, ref, watch } from 'vue'
+import TerminCard from '../components/TerminCard.vue'
+
+let loading = ref(true)
 
 const events = ref<ITermin[]>([])
 const heute = new Date()
@@ -106,8 +99,8 @@ function toDateKey(date: Date): string {
 function isEventOnDay(event: ITermin, day: number): boolean {
     const dayDate = new Date(currentYear.value, currentMonth.value, day)
     const dayKey = toDateKey(dayDate)
-    const startKey = event.start
-    const endKey = event.ende ?? event.start
+    const startKey = formatDate(event.start)
+    const endKey = formatDate(event.ende ?? event.start)
 
     return dayKey >= startKey && dayKey <= endKey
 }
@@ -145,17 +138,23 @@ function openDay(day: number) {
 }
 
 async function loadEvents() {
+    loading.value = true
     const startDate = new Date(currentYear.value, currentMonth.value - 1, 1)
     const endDate = new Date(currentYear.value, currentMonth.value + 2, 0)
 
-    const res = await ApiService.get<ApiResponse<ITermin[]>>('/termine', {
+    const response = await ApiService.get<ITermin[]>('/termine', {
         params: {
-            start: toDateKey(startDate),
-            ende: toDateKey(endDate)
+            start: formatDate(startDate),
+            ende: formatDate(endDate)
         }
     })
 
-    events.value = res.data
+    events.value = response.map((event) => ({
+        ...event,
+        start: formatDate(event.start),
+        ende: event.ende ? formatDate(event.ende) : undefined
+    }))
+    loading.value = false
 }
 
 onMounted(() => {
@@ -339,6 +338,7 @@ watch([currentYear, currentMonth], () => {
     margin-bottom: 0.75rem;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

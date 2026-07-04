@@ -1,7 +1,7 @@
 import { ILocation } from "@/models/locations"
 
 
-export const LocationService = {
+export const OrteService = {
     getLocations(): ILocation[] {
         return MOCK_DATA
     },
