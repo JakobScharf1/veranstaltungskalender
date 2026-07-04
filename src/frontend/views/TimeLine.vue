@@ -13,7 +13,7 @@
                 </template>
                 <template #list="{ items: dataItems }">
                     <div class="card-grid">
-                        <TerminCard v-for="item in dataItems" :key="item.id" :item="item"></TerminCard>
+                        <TerminCard v-for="item in dataItems" :key="item.id" :item="item" :date="true"></TerminCard>
                     </div>
                 </template>
                 <template #empty class="justify-content-center">
@@ -89,7 +89,5 @@ onMounted(loadEvents)
         gap: 0.75rem;
     }
 }
-
-/* Cards */
 
 </style>

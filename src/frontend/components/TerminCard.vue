@@ -1,24 +1,20 @@
 <template>
     <Card class="veranstaltung-card">
-        <template #header>
-            <div class="card-img-wrapper">
-                <img alt="Veranstaltungsbild" :src="item.veranstaltung.picture1 || fallbackImg" @error="onImgError" class="card-img" />
-                <div class="card-img-overlay"></div>
-                <div class="card-img-title">
+        <template #content>
+            <div class="card-content">
+                <div class="card-topline">
                     <span class="card-kategorie">{{ item.veranstaltung.kategorie.name }}</span>
-                    <h2 class="card-titel">{{ item.veranstaltung.titel }}</h2>
+                    <span v-if="date" class="card-date">📅 {{ item.start }}</span>
                 </div>
+                <h2 class="card-titel">{{ item.veranstaltung.titel }}</h2>
+                <p class="card-subtitle">📍 {{ item.veranstaltung.ort.bezeichnung }}, {{ item.veranstaltung.ort.adresse.ort }}</p>
+                <p class="card-beschreibung">{{ item.veranstaltung.info }}</p>
             </div>
         </template>
-        <template #subtitle>
-            <span class="card-subtitle"> 📍 {{ item.veranstaltung.ort.bezeichnung }}, {{ item.veranstaltung.ort.adresse.ort }} &nbsp;·&nbsp; 📅 {{ item.start }} </span>
-        </template>
-        <template #content>
-            <p class="card-beschreibung">{{ item.veranstaltung.info }}</p>
-        </template>
+
         <template #footer>
             <RouterLink :to="`/termin/${item.id}`">
-                <Button label="Mehr erfahren" class="w-full" />
+                <Button label="Mehr erfahren" severity="secondary" class="w-full" />
             </RouterLink>
         </template>
     </Card>
@@ -27,16 +23,10 @@
 <script setup lang="ts">
 import { ITermin } from '@/models/termin';
 
-const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='white'/%3E%3C/svg%3E"
-
 const props = defineProps<{
-    item: ITermin
+    item: ITermin,
+    date: boolean,
 }>()
-
-function onImgError(e: Event) {
-  const target = e.target as HTMLImageElement
-  target.src = fallbackImg
-}
 </script>
 
 <style>
@@ -65,61 +55,43 @@ function onImgError(e: Event) {
     flex: 1;
 }
 
-.card-img-wrapper {
-    position: relative;
-    overflow: hidden;
+.card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
 }
 
-.card-img {
-    width: 100%;
-    height: 15rem;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-    transition: transform 0.3s ease;
-}
-
-@media (max-width: 560px) {
-    .card-img {
-        height: 12rem;
-    }
-}
-
-.veranstaltung-card:hover .card-img {
-    transform: scale(1.03);
-}
-
-.card-img-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.55) 100%);
-}
-
-.card-img-title {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 1rem 1.2rem;
+.card-topline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .card-kategorie {
     display: inline-block;
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.75);
-    margin-bottom: 0.3rem;
+    color: var(--p-primary-color);
+}
+
+.card-date {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--p-text-color);
+    background: var(--p-content-hover-background);
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
 }
 
 .card-titel {
     margin: 0;
     font-size: 1.15rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--p-text-color);
     line-height: 1.3;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 @media (max-width: 560px) {
@@ -129,6 +101,7 @@ function onImgError(e: Event) {
 }
 
 .card-subtitle {
+    margin: 0;
     font-size: 0.82rem;
     color: var(--p-text-muted-color);
 }
@@ -139,6 +112,7 @@ function onImgError(e: Event) {
     line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

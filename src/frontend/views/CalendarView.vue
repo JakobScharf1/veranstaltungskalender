@@ -48,7 +48,7 @@
     <!-- Detail Drawer für einen Tag -->
     <Drawer v-model:visible="drawerVisible" :header="drawerHeader" position="right" style="width: 26rem">
         <div class="drawer-events">
-            <TerminCard v-for="event in selectedEvents" :key="event.id" :item="event"></TerminCard>
+            <TerminCard v-for="event in selectedEvents" :key="event.id" :item="event" :date="false"></TerminCard>
         </div>
     </Drawer>
 </template>
@@ -56,7 +56,7 @@
 <script setup lang="ts">
 import { ITermin } from '@/models/termin'
 import { ApiService } from '@/services/APIService'
-import { formatDate } from '@/services/Helper'
+import { dateToString, formatDate } from '@/services/Helper'
 import { computed, onMounted, ref, watch } from 'vue'
 import TerminCard from '../components/TerminCard.vue'
 
@@ -137,6 +137,14 @@ function openDay(day: number) {
     drawerVisible.value = true
 }
 
+function normalizeTermin(item: ITermin): ITermin {
+    return {
+        ...item,
+        start: item.start ? dateToString(item.start) : '',
+        ende: item.ende ? dateToString(item.ende) : undefined
+    }
+}
+
 async function loadEvents() {
     loading.value = true
     const startDate = new Date(currentYear.value, currentMonth.value - 1, 1)
@@ -150,9 +158,7 @@ async function loadEvents() {
     })
 
     events.value = response.map((event) => ({
-        ...event,
-        start: formatDate(event.start),
-        ende: event.ende ? formatDate(event.ende) : undefined
+        ...normalizeTermin(event)
     }))
     loading.value = false
 }

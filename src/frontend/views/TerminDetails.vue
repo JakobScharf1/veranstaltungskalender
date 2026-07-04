@@ -21,8 +21,16 @@
                                     <Tag v-if="termin.veranstaltung?.kostenlos" value="Eintritt frei" severity="success" rounded />
                                     <Tag v-else value="Kostenpflichtig" severity="warning" rounded />
                                 </div>
-                                <h1 class="hero-title">{{ termin.veranstaltung?.titel }}</h1>
-                                <p v-if="termin.veranstaltung?.untertitel" class="hero-subtitle">{{ termin.veranstaltung.untertitel }}</p>
+                                <div class="hero-title-row">
+                                    <div>
+                                        <h1 class="hero-title">{{ termin.veranstaltung?.titel }}</h1>
+                                        <p v-if="termin.veranstaltung?.untertitel" class="hero-subtitle">{{ termin.veranstaltung.untertitel }}</p>
+                                    </div>
+                                    <div class="hero-date-pill">
+                                        <i class="pi pi-calendar"></i>
+                                        <span>{{ formatDateRange(termin) }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -115,8 +123,8 @@ const error = ref<string | null>(null)
 const terminId = computed(() => String(route.params.id))
 
 function onImgError(e: Event) {
-  const target = e.target as HTMLImageElement
-  target.src = fallbackImg
+    const target = e.target as HTMLImageElement
+    target.src = fallbackImg
 }
 
 function normalizeTermin(item: ITermin): ITermin {
@@ -128,13 +136,30 @@ function normalizeTermin(item: ITermin): ITermin {
 }
 
 function formatDateRange(item: ITermin): string {
-    if (item.allday) return 'Ganztägig'
+    if (!item.start) return 'Unbekannt'
 
-    const start = item.start ? dateToString(item.start) : 'Unbekannt'
-    if (!item.start || start === 'Unbekannt') return 'Unbekannt'
+    const startDate = item.start ? dateToString(item.start) : 'Unbekannt'
+    const endDate = item.ende ? dateToString(item.ende) : undefined
 
-    const ende = item.ende ? dateToString(item.ende) : undefined
-    return ende && ende !== start ? `${start} – ${ende}` : start
+    if (item.allday) {
+        if (endDate && endDate !== startDate) {
+            return `${startDate} – ${endDate} · Ganztägig`
+        }
+        return `${startDate} · Ganztägig`
+    }
+
+    if (!endDate || endDate === startDate) {
+        return startDate
+    }
+
+    const startTime = typeof item.start === 'string' && item.start.includes('T') ? item.start.split('T')[1]?.slice(0, 5) : undefined
+    const endTime = typeof item.ende === 'string' && item.ende.includes('T') ? item.ende.split('T')[1]?.slice(0, 5) : undefined
+
+    if (startTime && endTime && startDate === endDate) {
+        return `${startDate} · ${startTime} – ${endTime}`
+    }
+
+    return `${startDate} – ${endDate}`
 }
 
 async function loadTerminDetails() {
@@ -156,8 +181,8 @@ async function loadTerminDetails() {
         termin.value = selected
 
         if (selected.veranstaltung?.id) {
-            ApiService.get<ITermin[]>("/termine?veranstaltung=" + selected.veranstaltung.id)
-                .then((response) => relatedTermine.value = response.filter((item) => item.id !== selected.id))
+            ApiService.get<ITermin[]>('/termine?veranstaltung=' + selected.veranstaltung.id)
+                .then((response) => (relatedTermine.value = response.filter((item) => item.id !== selected.id)))
                 .catch(() => {
                     error.value = 'Die verwandten Termine konnten nicht geladen werden.'
                     relatedTermine.value = []
@@ -197,12 +222,12 @@ watch(terminId, () => {
 
 .hero-image-wrapper {
     position: relative;
-    min-height: 20rem;
+    min-height: 16rem;
 }
 
 .hero-image {
     width: 100%;
-    height: 20rem;
+    height: 16rem;
     object-fit: cover;
     display: block;
 }
@@ -210,9 +235,15 @@ watch(terminId, () => {
 .hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.35) 100%);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.22) 100%);
     display: flex;
     align-items: flex-end;
+}
+
+.hero-image-wrapper:not(:has(img[src]:not([src='']))) .hero-overlay,
+.hero-image-wrapper:has(img[src='']) .hero-overlay,
+.hero-image-wrapper:has(img[onerror]) .hero-overlay {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.14) 100%);
 }
 
 .hero-content {
@@ -228,6 +259,13 @@ watch(terminId, () => {
     margin-bottom: 0.75rem;
 }
 
+.hero-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
 .hero-title {
     margin: 0;
     font-size: clamp(1.6rem, 2.2vw, 2.4rem);
@@ -239,6 +277,19 @@ watch(terminId, () => {
     margin: 0.5rem 0 0;
     font-size: 1rem;
     opacity: 0.9;
+}
+
+.hero-date-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(8px);
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .detail-grid {
@@ -323,6 +374,11 @@ watch(terminId, () => {
 @media (max-width: 900px) {
     .detail-grid {
         grid-template-columns: 1fr;
+    }
+
+    .hero-title-row {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>
