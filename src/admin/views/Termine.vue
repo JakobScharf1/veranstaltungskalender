@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import EditEvent from '@/admin/components/EditEvent.vue'
 import { ITermin } from '@/models/termin'
-import { EventService } from '@/services/TermineService'
+import { TermineService } from '@/services/TermineService'
 import { useAuthStore } from '@/store/auth'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'
@@ -22,7 +22,7 @@ const authStore = useAuthStore()
 
 onMounted(() => {
     authStore.fetchUser()
-    events.value = EventService.getEvents()
+    events.value = TermineService.getEvents()
 })
 
 function openNew(): void {
@@ -134,7 +134,7 @@ function onImgUpload(event: any): void {
                 <Column field="veranstalter" header="Veranstalter" sortable style="min-width: 10rem"></Column>
                 <Column field="date" header="Datum" sortable style="min-width: 10rem">
                     <template #body="slotProps">
-                        {{ EventService.formatDateToString(slotProps.data.date) }}
+                        {{ TermineService.formatDateToString(slotProps.data.date) }}
                     </template>
                 </Column>
                 <Column field="title" header="Titel" sortable style="min-width: 16rem"></Column>
