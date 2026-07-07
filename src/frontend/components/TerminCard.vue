@@ -3,17 +3,17 @@
         <template #content>
             <div class="card-content">
                 <div class="card-topline">
-                    <span class="card-kategorie">{{ item.veranstaltung.kategorie.name }}</span>
+                    <span class="card-kategorie">{{ item?.veranstaltung?.kategorie?.name }}</span>
                     <span v-if="date" class="card-date">📅 {{ item.start }}</span>
                 </div>
-                <h2 class="card-titel">{{ item.veranstaltung.titel }}</h2>
-                <p class="card-subtitle">📍 {{ item.veranstaltung.ort.bezeichnung }}, {{ item.veranstaltung.ort.adresse.ort }}</p>
-                <p class="card-beschreibung">{{ item.veranstaltung.info }}</p>
+                <h2 class="card-titel">{{ item?.veranstaltung?.titel }}</h2>
+                <p class="card-subtitle">📍 {{ item?.veranstaltung?.ort?.bezeichnung }}, {{ item?.veranstaltung?.ort?.adresse?.ort }}</p>
+                <p class="card-beschreibung">{{ item?.veranstaltung?.info }}</p>
             </div>
         </template>
 
         <template #footer>
-            <RouterLink :to="`/termin/${item.id}`">
+            <RouterLink :to="`/termin/${item.id}/${toUrlFriendly(item.veranstaltung?.titel) || 'termin'}`">
                 <Button label="Mehr erfahren" severity="secondary" class="w-full" />
             </RouterLink>
         </template>
@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { ITermin } from '@/models/termin';
+import { toUrlFriendly } from '@/services/Helper';
 
 const props = defineProps<{
     item: ITermin,

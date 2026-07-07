@@ -2,7 +2,7 @@
     <div class="termin-details-page">
         <div v-if="loading" class="loading-state">
             <ProgressSpinner />
-            <p>Details werden geladen...</p>
+            <p>Daten werden geladen...</p>
         </div>
 
         <Message v-else-if="error" severity="error" :closable="false">{{ error }}</Message>
@@ -52,7 +52,9 @@
                                     <i class="pi pi-map-marker"></i>
                                     <div>
                                         <strong>Ort</strong>
-                                        <span>{{ termin.veranstaltung?.ort?.bezeichnung }}, {{ termin.veranstaltung?.ort?.adresse?.ort }}</span>
+                                        <span>{{ termin.veranstaltung?.ort?.bezeichnung }}</span>
+                                        <span>{{ termin.veranstaltung?.ort?.adresse?.strasse }}</span>
+                                        <span>{{ termin.veranstaltung?.ort?.adresse?.plz }} {{ termin.veranstaltung?.ort?.adresse?.ort }}</span>
                                     </div>
                                 </div>
                                 <div class="info-item">
@@ -85,9 +87,9 @@
                                         <div class="related-card-content">
                                             <div>
                                                 <strong>{{ formatDateRange(item) }}</strong>
-                                                <p>{{ item.veranstaltung?.ort?.bezeichnung }}</p>
+                                                <p>{{ item.veranstaltung?.ort?.bezeichnung }}, {{ item.veranstaltung?.ort?.adresse?.ort }}</p>
                                             </div>
-                                            <RouterLink :to="`/termin/${item.id}`">
+                                            <RouterLink :to="`/termin/${item.id}/${toUrlFriendly(item.veranstaltung?.titel) || 'termin'}`">
                                                 <Button label="Details" size="small" text />
                                             </RouterLink>
                                         </div>
@@ -109,6 +111,7 @@ import { ApiService } from '@/services/APIService'
 import { dateToString } from '@/services/Helper'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { toUrlFriendly } from '@/services/Helper'
 
 const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='white'/%3E%3C/svg%3E"
 
@@ -127,14 +130,6 @@ function onImgError(e: Event) {
     target.src = fallbackImg
 }
 
-function normalizeTermin(item: ITermin): ITermin {
-    return {
-        ...item,
-        start: item.start ? dateToString(item.start) : '',
-        ende: item.ende ? dateToString(item.ende) : undefined
-    }
-}
-
 function formatDateRange(item: ITermin): string {
     if (!item.start) return 'Unbekannt'
 
@@ -143,7 +138,7 @@ function formatDateRange(item: ITermin): string {
 
     if (item.allday) {
         if (endDate && endDate !== startDate) {
-            return `${startDate} – ${endDate} · Ganztägig`
+            return `${startDate} - ${endDate} · Ganztägig`
         }
         return `${startDate} · Ganztägig`
     }
@@ -156,10 +151,10 @@ function formatDateRange(item: ITermin): string {
     const endTime = typeof item.ende === 'string' && item.ende.includes('T') ? item.ende.split('T')[1]?.slice(0, 5) : undefined
 
     if (startTime && endTime && startDate === endDate) {
-        return `${startDate} · ${startTime} – ${endTime}`
+        return `${startDate} · ${startTime} - ${endTime}`
     }
 
-    return `${startDate} – ${endDate}`
+    return `${startDate} - ${endDate}`
 }
 
 async function loadTerminDetails() {
@@ -168,7 +163,7 @@ async function loadTerminDetails() {
 
     try {
         const response = await ApiService.get<ITermin[]>('/termine')
-        const allTermine = response.map(normalizeTermin)
+        const allTermine = response
         const selected = allTermine.find((item) => String(item.id) === terminId.value)
 
         if (!selected) {

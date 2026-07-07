@@ -10,7 +10,7 @@
 
         <div v-if="loading" class="loading-state">
             <ProgressSpinner />
-            <p>Details werden geladen...</p>
+            <p>Daten werden geladen...</p>
         </div>
 
         <!-- Wochentag-Header -->
@@ -36,7 +36,7 @@
                 <span class="tag-nummer">{{ tag }}</span>
                 <div class="event-dots">
                     <template v-for="(event, i) in getEvents(tag).slice(0, 3)" :key="i">
-                        <div v-if="event.allday" class="event-pill" v-tooltip.bottom="event.veranstaltung.titel">GT</div>
+                        <div v-if="event.allday" class="event-pill" v-tooltip.bottom="event.veranstaltung.titel">G</div>
                         <div v-else class="event-dot" v-tooltip.bottom="event.veranstaltung.titel"></div>
                     </template>
                     <span v-if="getEvents(tag).length > 3" class="event-mehr"> +{{ getEvents(tag).length - 3 }} </span>
@@ -137,14 +137,6 @@ function openDay(day: number) {
     drawerVisible.value = true
 }
 
-function normalizeTermin(item: ITermin): ITermin {
-    return {
-        ...item,
-        start: item.start ? dateToString(item.start) : '',
-        ende: item.ende ? dateToString(item.ende) : undefined
-    }
-}
-
 async function loadEvents() {
     loading.value = true
     const startDate = new Date(currentYear.value, currentMonth.value - 1, 1)
@@ -157,9 +149,7 @@ async function loadEvents() {
         }
     })
 
-    events.value = response.map((event) => ({
-        ...normalizeTermin(event)
-    }))
+    events.value = response
     loading.value = false
 }
 

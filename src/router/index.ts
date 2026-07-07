@@ -43,7 +43,7 @@ export const router = createRouter({
             ]
         },
         {
-            path: '/termin/:id',
+            path: '/termin/:id/:title',
             name: 'terminDetails',
             component: () => import('@/frontend/views/TerminDetails.vue')
         },

@@ -3,8 +3,8 @@ import { IVeranstaltung } from "./veranstaltung";
 export interface ITermin {
     id?: number,
     veranstaltung: IVeranstaltung,
-    start: string,
-    ende?: string,
+    start: Date | string,
+    ende?: Date | string,
     allday: boolean,
     info?: string,
 }

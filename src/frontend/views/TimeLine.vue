@@ -2,7 +2,7 @@
 
     <div v-if="loading" class="loading-state">
         <ProgressSpinner />
-        <p>Details werden geladen...</p>
+        <p>Daten werden geladen...</p>
     </div>
 
     <Card v-else class="mx-5">

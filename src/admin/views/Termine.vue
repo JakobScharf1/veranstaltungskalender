@@ -14,19 +14,39 @@ const deleteDialog = ref(false)
 const deleteMultiDialog = ref(false)
 const event = ref<ITermin | null>(null)
 const selectedEvents = ref<ITermin[]>([])
-const filters = ref({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-})
+const filters = ref({})
+const search = ref('')
 const submitted = ref(false)
 const authStore = useAuthStore()
+const loading = ref(true)
 
-onMounted(() => {
+onMounted(async () => {
     authStore.fetchUser()
-    events.value = TermineService.getEvents()
+    loading.value = true
+    events.value = await TermineService.getEvents()
+    loading.value = false
 })
 
 function openNew(): void {
-    event.value = null
+    event.value = {
+         veranstaltung: {
+            titel: '',
+            ort: {
+                bezeichnung: '',
+                adresse: { ort: '' }
+            },
+            veranstalter: {
+                bezeichnung: '',
+                adresse: { ort: '' }
+            },
+            kategorie: { id: 0, name: '' },
+            kostenlos: false
+        },
+        start: '',
+        ende: '',
+        allday: false,
+        info: ''
+    }
     submitted.value = false
     eventDialog.value = true
 }
@@ -119,32 +139,51 @@ function onImgUpload(event: any): void {
                             <InputIcon>
                                 <i class="pi pi-search" />
                             </InputIcon>
-                            <InputText v-model="filters['global'].value" placeholder="Suchen..." />
+                            <InputText v-model="search" placeholder="Suchen..." />
                         </IconField>
                     </div>
                 </template>
 
-                <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-                <Column field="image" header="Bild" style="min-width: 10rem">
-                    <template #body="slotProps">
-                        <img v-if="slotProps.data.image" :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
-                        <img v-else src="../../../public/images/img.svg" :alt="slotProps.data.name" class="w-24 rounded" />
-                    </template>
-                </Column>
-                <Column field="veranstalter" header="Veranstalter" sortable style="min-width: 10rem"></Column>
-                <Column field="date" header="Datum" sortable style="min-width: 10rem">
-                    <template #body="slotProps">
-                        {{ TermineService.formatDateToString(slotProps.data.date) }}
-                    </template>
-                </Column>
-                <Column field="title" header="Titel" sortable style="min-width: 16rem"></Column>
-                <Column field="category" header="Kategorie" sortable style="min-width: 10rem"></Column>
-                <Column :exportable="false" style="min-width: 12rem">
-                    <template #body="slotProps">
-                        <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editEvent(slotProps.data)" />
-                        <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDelete(slotProps.data)" />
-                    </template>
-                </Column>
+                <div v-if="loading" class="loading-state">
+                    <ProgressSpinner />
+                    <p>Daten werden geladen...</p>
+                </div>
+
+                <template v-else>
+                    <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
+                    <Column field="image" header="Bild" style="min-width: 10rem">
+                        <template #body="slotProps">
+                            <img v-if="slotProps.data.image" :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
+                            <img v-else src="../../../public/images/img.svg" :alt="slotProps.data.name" class="w-24 rounded" />
+                        </template>
+                    </Column>
+                    <Column header="Veranstalter" sortable style="min-width: 10rem">
+                        <template #body="slotProps">
+                            {{ slotProps.data.veranstaltung?.veranstalter?.bezeichnung || '' }}
+                        </template>
+                    </Column>
+                    <Column header="Datum" sortable style="min-width: 10rem">
+                        <template #body="slotProps">
+                            {{ TermineService.formatDateToString(slotProps.data.start) }}
+                        </template>
+                    </Column>
+                    <Column header="Titel" sortable style="min-width: 16rem">
+                        <template #body="slotProps">
+                            {{ slotProps.data.veranstaltung?.titel || '' }}
+                        </template>
+                    </Column>
+                    <Column header="Kategorie" sortable style="min-width: 10rem">
+                        <template #body="slotProps">
+                            {{ slotProps.data.veranstaltung?.kategorie?.name || '' }}
+                        </template>
+                    </Column>
+                    <Column :exportable="false" style="min-width: 12rem">
+                        <template #body="slotProps">
+                            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editEvent(slotProps.data)" />
+                            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDelete(slotProps.data)" />
+                        </template>
+                    </Column>
+                </template>
             </DataTable>
         </div>
 

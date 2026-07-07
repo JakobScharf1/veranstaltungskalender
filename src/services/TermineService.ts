@@ -1,19 +1,18 @@
 import { ITermin } from "@/models/termin"
 import { ApiService } from "./APIService"
+import { dateToString } from "./Helper"
 
 export const TermineService = {
-    getEvents(): ITermin[] {
-        ApiService.get<ITermin[]>('/termine').then((response) => {
-            console.log('API Response:', response)
-            return response
-        }).catch((error) => {
+    async getEvents(): Promise<ITermin[]> {
+        try {
+            return await ApiService.get<ITermin[]>('/termine')
+        } catch (error) {
             console.error('API Error:', error)
             return []
-        })
-        return []
+        }
     },
-    formatDateToString(date: Date): string {
-        const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
-        return date.toLocaleDateString('de-DE', options)
+    formatDateToString(date: Date | string | null | undefined): string {
+        if (!date) return ''
+        return dateToString(date)
     },
 }

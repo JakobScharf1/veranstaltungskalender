@@ -22,10 +22,18 @@ export function dateToString(d: Date | string): string {
 
     if (typeof d === 'string') {
         const trimmed = d.trim()
+
         if (/^\d{2}\.\d{2}\.\d{4}$/.test(trimmed)) return trimmed
-        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-            const [year, month, day] = trimmed.split('-').map(Number)
-            return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`
+
+        if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d{3})?Z?)?$/.test(trimmed)) {
+            const [datePart, timePart] = trimmed.split('T')
+            const [year, month, day] = datePart.split('-').map(Number)
+            const formattedDate = `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${year}`
+
+            if (!timePart) return formattedDate
+
+            const time = timePart.slice(0, 5)
+            return `${formattedDate} ${time}`
         }
     }
 
@@ -34,4 +42,21 @@ export function dateToString(d: Date | string): string {
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const year = date.getFullYear()
     return `${day}.${month}.${year}`
+}
+
+export function toUrlFriendly(text: string): string {
+  return text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
 }
