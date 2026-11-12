@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-import router from './router/index.js'
+import router from './router'
 
 import Aura from '@primeuix/themes/aura'
 import PrimeVue from 'primevue/config'
@@ -12,7 +12,6 @@ import '@/assets/styles.scss'
 import '@/assets/tailwind.css'
 import { createPinia } from 'pinia'
 import 'primeflex/primeflex.css'
-import { useAuthStore } from './store/auth.js'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -31,9 +30,6 @@ app.use(PrimeVue, {
 app.use(ToastService)
 app.use(ConfirmationService)
 
-const auth = useAuthStore()
-
-auth.fetchUser().finally(() => {
-    app.mount('#app')
-})
+// Nutzerdaten werden bei Bedarf im Router-Guard geladen
+app.mount('#app')
 

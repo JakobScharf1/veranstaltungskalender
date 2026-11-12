@@ -13,33 +13,55 @@ export const router = createRouter({
                 {
                     path: '',
                     component: () => import('@/frontend/views/TimeLine.vue')
-                },
-            ],
+                }
+            ]
         },
-
         {
             path: '/mgmt',
             component: AppLayout,
             children: [
                 {
                     path: '',
-                    redirect: '/mgmt/termine'
+                    redirect: { name: 'termine' }
                 },
                 {
-                    path: '/mgmt/termine',
+                    path: 'termine',
                     name: 'termine',
                     component: () => import('@/admin/views/Termine.vue')
                 },
                 {
-                    path: '/mgmt/veranstalter',
-                    name: 'adminveranstalter',
-                    component: () => import('@/admin/views/Veranstalter.vue')
+                    path: 'veranstaltungen',
+                    name: 'veranstaltungen',
+                    component: () => import('@/admin/views/Veranstaltungen.vue')
                 },
                 {
-                    path: '/mgmt/orte',
+                    path: 'orte',
                     name: 'orte',
                     component: () => import('@/admin/views/Orte.vue')
                 },
+                {
+                    path: 'veranstalter',
+                    name: 'veranstalter',
+                    component: () => import('@/admin/views/Veranstalter.vue'),
+                    meta: { rolle: 'admin' }
+                },
+                {
+                    path: 'kategorien',
+                    name: 'kategorien',
+                    component: () => import('@/admin/views/Kategorien.vue'),
+                    meta: { rolle: 'superadmin' }
+                },
+                {
+                    path: 'partner',
+                    name: 'partner',
+                    component: () => import('@/admin/views/Partner.vue'),
+                    meta: { rolle: 'superadmin' }
+                },
+                {
+                    path: 'profil',
+                    name: 'profil',
+                    component: () => import('@/admin/views/Profil.vue')
+                }
             ]
         },
         {
@@ -52,7 +74,6 @@ export const router = createRouter({
             name: 'notfound',
             component: () => import('@/admin/views/NotFound.vue')
         },
-
         {
             path: '/auth/login',
             name: 'login',
@@ -71,20 +92,29 @@ export const router = createRouter({
     ]
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to) => {
     const authStore = useAuthStore()
+    const istVerwaltung = to.path.startsWith('/mgmt')
 
-    if (to.path.startsWith('/mgmt') && !authStore.token) {
-        next({ name: 'login' })
-        return
+    if (istVerwaltung) {
+        // Rollen sind erst nach GET /me bekannt (z. B. beim direkten Aufruf/Reload)
+        await authStore.ensureUser()
     }
 
-    if (to.name === 'login' && authStore.token) {
-        next({ path: '/mgmt' })
-        return
+    if (istVerwaltung && !authStore.isAuthenticated) {
+        return { name: 'login' }
     }
 
-    next()
+    if (to.name === 'login' && authStore.isAuthenticated) {
+        return { name: 'termine' }
+    }
+
+    const benoetigteRolle = to.meta.rolle
+    if (benoetigteRolle && !authStore.hatRolle(benoetigteRolle)) {
+        return { name: 'accessDenied' }
+    }
+
+    return true
 })
 
 export default router

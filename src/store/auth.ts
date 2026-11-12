@@ -1,60 +1,83 @@
-import router from '@/router'
-import { ApiService } from '@/services/APIService'
+import { ApiError } from '@/services/api/ApiError'
+import { tokenStorage } from '@/services/api/tokenStorage'
+import { authService } from '@/services/authService'
+import type { CurrentUser, PasswortPayload, ProfilPayload, Rolle } from '@/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-export const useAuthStore = defineStore('auth', () => {
-    const username = ref("")
-    const vorname = ref("")
-    const nachname = ref("")
-    const admin = ref(false)
-    const email = ref("")
-    const organisation = ref("")
+const ROLLEN_RANG: Record<Rolle, number> = {
+    user: 0,
+    admin: 1,
+    superadmin: 2
+}
 
-    const token = ref<string | null>(localStorage.getItem('token'))
+export const useAuthStore = defineStore('auth', () => {
+    const token = ref<string | null>(tokenStorage.get())
+    const user = ref<CurrentUser | null>(null)
+    let pendingUserRequest: Promise<void> | null = null
 
     const isAuthenticated = computed(() => !!token.value)
+    const isSuperadmin = computed(() => user.value?.superadmin === true)
+    const isAdmin = computed(() => isSuperadmin.value || user.value?.admin === true)
 
-    async function login(username: string, password: string): Promise<boolean> {
-        const res = await ApiService.post<any>(`/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`)
-        try {
-            token.value = res.token
-            username = res.username
-            localStorage.setItem('token', res.token)
-            return true
+    const rolle = computed<Rolle>(() => {
+        if (isSuperadmin.value) return 'superadmin'
+        if (isAdmin.value) return 'admin'
+        return 'user'
+    })
 
-        } catch(error) {
-            console.error('Error during login:', error)
-            return false
-        }
+    function hatRolle(mindestRolle: Rolle): boolean {
+        return ROLLEN_RANG[rolle.value] >= ROLLEN_RANG[mindestRolle]
+    }
+
+    function clearSession(): void {
+        token.value = null
+        user.value = null
+        tokenStorage.clear()
+    }
+
+    async function login(username: string, password: string): Promise<void> {
+        const response = await authService.login(username, password)
+        token.value = response.token
+        tokenStorage.set(response.token)
+        await fetchUser()
     }
 
     async function fetchUser(): Promise<void> {
         if (!token.value) return
-        const res = await ApiService.get<any>('/me', { useAuthToken: true })
+
         try {
-            username.value = res.username
-            vorname.value = res.vorname
-            nachname.value = res.nachname
-            admin.value = res.admin
-            email.value = res.email
-            organisation.value = res.organisation
-        } catch(error) {
-            console.error('Error fetching user info:', error)
+            user.value = await authService.getMe()
+        } catch (error) {
+            // Abgelaufenes oder ungültiges Token: Sitzung verwerfen
+            if (error instanceof ApiError && error.status === 401) {
+                clearSession()
+            }
         }
     }
 
-    async function logout(): Promise<void> {
-        token.value = null
-        localStorage.removeItem('token')
-        username.value = ""
-        vorname.value = ""
-        nachname.value = ""
-        admin.value = false
-        email.value = ""
-        organisation.value = ""
-        router.push('/')
+    /** Lädt die Nutzerdaten genau einmal, auch wenn mehrere Aufrufer gleichzeitig warten. */
+    function ensureUser(): Promise<void> {
+        if (user.value || !token.value) return Promise.resolve()
+
+        pendingUserRequest ??= fetchUser().finally(() => {
+            pendingUserRequest = null
+        })
+        return pendingUserRequest
     }
 
-    return { username, vorname, nachname, admin, email, organisation, token, isAuthenticated, login, logout, fetchUser }
+    async function updateProfil(payload: ProfilPayload | PasswortPayload): Promise<void> {
+        await authService.updateMe(payload)
+        await fetchUser()
+    }
+
+    async function logout(): Promise<void> {
+        try {
+            await authService.logout()
+        } finally {
+            clearSession()
+        }
+    }
+
+    return { token, user, isAuthenticated, isAdmin, isSuperadmin, rolle, hatRolle, login, fetchUser, ensureUser, updateProfil, logout }
 })

@@ -1,22 +1,43 @@
 <script setup lang="ts">
-import router from '@/router'
+import { ApiError } from '@/services/api/ApiError'
+import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store/auth'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const email = ref('')
-const password = ref('')
-const invalid = ref(false)
-
+const router = useRouter()
 const authStore = useAuthStore()
 
+const username = ref('')
+const password = ref('')
+const loading = ref(false)
+const fehler = ref<string | null>(null)
+const verifizierungGesendet = ref(false)
+
 async function submitLogin(): Promise<void> {
-    const success = await authStore.login(email.value, password.value)
-    if (!success) {
-        invalid.value = true
-    } else {
-        invalid.value = false
-        authStore.fetchUser()
-        router.push('/mgmt/termine')
+    loading.value = true
+    fehler.value = null
+
+    try {
+        await authStore.login(username.value.trim(), password.value)
+        await router.push({ name: 'termine' })
+    } catch (error) {
+        fehler.value = error instanceof ApiError && error.status !== 401 ? error.message : 'Ungültige Anmeldedaten'
+    } finally {
+        loading.value = false
+    }
+}
+
+/** Eingabe mit @ wird als E-Mail, sonst als Benutzername übermittelt. */
+async function sendVerificationMail(): Promise<void> {
+    const kennung = username.value.trim()
+    const request = kennung.includes('@') ? { email: kennung } : { username: kennung }
+
+    try {
+        await authService.sendVerificationMail(request)
+        verifizierungGesendet.value = true
+    } catch {
+        fehler.value = 'Die Bestätigungsmail konnte nicht gesendet werden.'
     }
 }
 </script>
@@ -33,20 +54,48 @@ async function submitLogin(): Promise<void> {
                     </div>
 
                     <form @submit.prevent="submitLogin">
-                        <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                        <InputText id="email1" type="text" placeholder="Email-Adresse" class="w-full mb-4" v-model="email" :invalid="invalid" />
+                        <label for="login-username" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Benutzername oder E-Mail</label>
+                        <InputText
+                            id="login-username"
+                            v-model="username"
+                            type="text"
+                            placeholder="Benutzername oder E-Mail"
+                            autocomplete="username"
+                            autocapitalize="none"
+                            class="w-full mb-4"
+                            :invalid="!!fehler"
+                            required
+                        />
 
-                        <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Passwort</label>
-                        <Password id="password1" v-model="password" placeholder="Passwort" :toggleMask="true" class="mb-4" fluid :feedback="false" :invalid="invalid"></Password>
+                        <label for="login-password" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Passwort</label>
+                        <Password
+                            v-model="password"
+                            input-id="login-password"
+                            placeholder="Passwort"
+                            toggle-mask
+                            :feedback="false"
+                            :invalid="!!fehler"
+                            autocomplete="current-password"
+                            class="mb-6"
+                            fluid
+                            required
+                        />
 
-                        <div class="flex items-center justify-between mt-2 mb-4 gap-8">
-                            <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Passwort vergessen?</span>
+                        <Button label="Einloggen" class="w-full" type="submit" :loading="loading" />
+
+                        <div v-if="fehler" class="flex flex-col items-center gap-2 mt-4 text-center" role="alert">
+                            <span class="text-red-500">{{ fehler }}</span>
+                            <Button
+                                v-if="!verifizierungGesendet && username.trim()"
+                                label="E-Mail noch nicht bestätigt? Bestätigungsmail erneut senden"
+                                link
+                                size="small"
+                                @click="sendVerificationMail"
+                            />
                         </div>
-                        <Button label="Einloggen" class="w-full" type="submit"></Button>
-
-                        <div v-if="invalid" class="flex text-red-500 text-center justify-center mt-4">
-                            <span>Ungültige Anmeldedaten</span>
-                        </div>
+                        <Message v-if="verifizierungGesendet" severity="success" :closable="false" class="mt-4">
+                            Falls ein Konto existiert, wurde eine Bestätigungsmail versendet.
+                        </Message>
                     </form>
                 </div>
             </div>

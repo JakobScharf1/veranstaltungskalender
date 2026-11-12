@@ -1,43 +1,53 @@
-<script setup>
+<script setup lang="ts">
 import { useLayout } from '@/admin/layout/composables/layout'
 import { useAuthStore } from '@/store/auth'
-import { Popover } from 'primevue'
-import { ref } from 'vue'
+import Popover from 'primevue/popover'
+import { useTemplateRef } from 'vue'
+import { useRouter } from 'vue-router'
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout()
 const authStore = useAuthStore()
+const router = useRouter()
 
-const profilePopover = ref()
+const profilePopover = useTemplateRef<InstanceType<typeof Popover>>('profilePopover')
 
-const toggleProfilePopover = (event) => {
+function toggleProfilePopover(event: Event): void {
     profilePopover.value?.toggle(event)
 }
 
-const logout = () => {
-    authStore.logout()
+function openProfil(): void {
+    profilePopover.value?.hide()
+    void router.push({ name: 'profil' })
+}
+
+async function logout(): Promise<void> {
+    await authStore.logout()
+    void router.push('/')
 }
 </script>
 
 <template>
     <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
-            <button class="layout-menu-button layout-topbar-action" @click="toggleMenu">
+            <button type="button" class="layout-menu-button layout-topbar-action" aria-label="Menü umschalten" @click="toggleMenu">
                 <i class="pi pi-bars"></i>
             </button>
             <router-link to="/" class="layout-topbar-logo">
-                <img src="/images/logo.png" class="h-11 w-auto" />
+                <img src="/images/logo.png" alt="" class="h-11 w-auto" />
                 <span class="text-lg">Veranstaltungsverwaltung</span>
             </router-link>
         </div>
 
         <div class="layout-topbar-actions">
             <div class="layout-config-menu">
-                <button type="button" class="layout-topbar-action" @click="toggleDarkMode">
+                <button type="button" class="layout-topbar-action" :aria-label="isDarkTheme ? 'Helles Design' : 'Dunkles Design'" @click="toggleDarkMode">
                     <i :class="['pi', { 'pi-moon': isDarkTheme, 'pi-sun': !isDarkTheme }]"></i>
                 </button>
             </div>
 
             <button
+                type="button"
+                aria-label="Weitere Aktionen"
                 class="layout-topbar-menu-button layout-topbar-action"
                 v-styleclass="{ selector: '@next', enterFromClass: 'hidden', enterActiveClass: 'p-anchored-overlay-enter-active', leaveToClass: 'hidden', leaveActiveClass: 'p-anchored-overlay-leave-active', hideOnOutsideClick: true }"
             >
@@ -46,7 +56,7 @@ const logout = () => {
 
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
-                    <button type="button" class="layout-topbar-action" @click="toggleProfilePopover">
+                    <button type="button" class="layout-topbar-action" aria-haspopup="true" @click="toggleProfilePopover">
                         <i class="pi pi-user"></i>
                         <span>Profil</span>
                     </button>
@@ -54,10 +64,10 @@ const logout = () => {
                     <Popover ref="profilePopover">
                         <div class="flex flex-col gap-3 p-2 w-48">
                             <div class="flex flex-col gap-1">
-                                <span class="font-semibold text-sm">{{ authStore.username }}</span>
-                                <span v-if="authStore.admin" class="text-xs text-surface-500">Admin</span>
-                                <span v-else class="text-xs text-surface-500">Benutzer</span>
+                                <span class="font-semibold text-sm">{{ authStore.user?.username }}</span>
+                                <span class="text-xs text-surface-500">{{ authStore.isSuperadmin ? 'Superadmin' : authStore.isAdmin ? 'Admin' : 'Benutzer' }}</span>
                             </div>
+                            <Button label="Mein Profil" icon="pi pi-user-edit" text size="small" @click="openProfil" />
                             <Button label="Logout" icon="pi pi-sign-out" severity="danger" text size="small" @click="logout" />
                         </div>
                     </Popover>

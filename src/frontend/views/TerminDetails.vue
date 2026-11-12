@@ -1,6 +1,6 @@
 <template>
     <div class="termin-details-page">
-        <div v-if="loading" class="loading-state">
+        <div v-if="loading" class="loading-state" role="status">
             <ProgressSpinner />
             <p>Daten werden geladen...</p>
         </div>
@@ -8,16 +8,19 @@
         <Message v-else-if="error" severity="error" :closable="false">{{ error }}</Message>
 
         <div v-else-if="termin" class="detail-shell">
-            <Button label="Zurück" icon="pi pi-arrow-left" text class="mb-4" @click="router.back()" />
+            <Button label="Zurück" icon="pi pi-arrow-left" text class="mb-4 self-start" @click="router.back()" />
 
             <Card class="detail-card">
                 <template #header>
                     <div class="hero-image-wrapper">
-                        <img :src="termin.veranstaltung?.picture1 || fallbackImg" :alt="termin.veranstaltung?.titel" @error="onImgError" class="hero-image" />
+                        <img v-if="heroImage" :src="heroImage" alt="" class="hero-image" @error="imageFailed = true" />
+                        <div v-else class="hero-image hero-image--placeholder" aria-hidden="true">
+                            <i class="pi pi-calendar hero-placeholder-icon"></i>
+                        </div>
                         <div class="hero-overlay">
                             <div class="hero-content">
                                 <div class="hero-badges">
-                                    <Tag :value="termin.veranstaltung?.kategorie?.name || 'Kategorie'" rounded />
+                                    <Tag :value="termin.veranstaltung.kategorie?.name || 'Veranstaltung'" rounded />
                                     <Tag v-if="termin.veranstaltung?.kostenlos" value="Eintritt frei" severity="success" rounded />
                                     <Tag v-else value="Kostenpflichtig" severity="warning" rounded />
                                 </div>
@@ -28,7 +31,7 @@
                                     </div>
                                     <div class="hero-date-pill">
                                         <i class="pi pi-calendar"></i>
-                                        <span>{{ formatDateRange(termin) }}</span>
+                                        <span>{{ formatTerminRange(termin) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -45,7 +48,7 @@
                                     <i class="pi pi-calendar"></i>
                                     <div>
                                         <strong>Datum</strong>
-                                        <span>{{ formatDateRange(termin) }}</span>
+                                        <span>{{ formatTerminRange(termin) }}</span>
                                     </div>
                                 </div>
                                 <div class="info-item">
@@ -76,7 +79,8 @@
 
                         <section class="info-section">
                             <h2>Beschreibung</h2>
-                            <p class="description-text">{{ termin.veranstaltung?.info || 'Für diese Veranstaltung ist noch keine Beschreibung verfügbar.' }}</p>
+                            <p class="description-text">{{ termin.veranstaltung.info || 'Für diese Veranstaltung ist noch keine Beschreibung verfügbar.' }}</p>
+                            <p v-if="termin.info" class="description-text mt-4">{{ termin.info }}</p>
 
                             <Divider />
 
@@ -86,12 +90,10 @@
                                     <template #content>
                                         <div class="related-card-content">
                                             <div>
-                                                <strong>{{ formatDateRange(item) }}</strong>
+                                                <strong>{{ formatTerminRange(item) }}</strong>
                                                 <p>{{ item.veranstaltung?.ort?.bezeichnung }}, {{ item.veranstaltung?.ort?.adresse?.ort }}</p>
                                             </div>
-                                            <RouterLink :to="`/termin/${item.id}/${toUrlFriendly(item.veranstaltung?.titel) || 'termin'}`">
-                                                <Button label="Details" size="small" text />
-                                            </RouterLink>
+                                            <Button as="router-link" :to="detailLink(item)" label="Details" size="small" text :aria-label="`Details zum Termin am ${formatTerminRange(item)}`" />
                                         </div>
                                     </template>
                                 </Card>
@@ -106,87 +108,53 @@
 </template>
 
 <script setup lang="ts">
-import type { ITermin } from '@/models/termin'
-import { ApiService } from '@/services/APIService'
-import { dateToString } from '@/services/Helper'
+import { ApiError } from '@/services/api/ApiError'
+import { terminService } from '@/services/resources'
+import type { Termin } from '@/types'
+import { formatTerminRange } from '@/utils/date'
+import { toUrlFriendly } from '@/utils/url'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { toUrlFriendly } from '@/services/Helper'
-
-const fallbackImg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='white'/%3E%3C/svg%3E"
 
 const route = useRoute()
 const router = useRouter()
 
-const termin = ref<ITermin | null>(null)
-const relatedTermine = ref<ITermin[]>([])
+const termin = ref<Termin | null>(null)
+const relatedTermine = ref<Termin[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-const terminId = computed(() => String(route.params.id))
+const terminId = computed(() => Number(route.params.id))
+const imageFailed = ref(false)
 
-function onImgError(e: Event) {
-    const target = e.target as HTMLImageElement
-    target.src = fallbackImg
+// Platzhalter, wenn kein Bild hinterlegt ist oder es nicht geladen werden kann
+const heroImage = computed(() => (imageFailed.value ? null : termin.value?.veranstaltung.picture1 || null))
+
+function detailLink(item: Termin): string {
+    return `/termin/${item.id}/${toUrlFriendly(item.veranstaltung.titel) || 'termin'}`
 }
 
-function formatDateRange(item: ITermin): string {
-    if (!item.start) return 'Unbekannt'
-
-    const startDate = item.start ? dateToString(item.start) : 'Unbekannt'
-    const endDate = item.ende ? dateToString(item.ende) : undefined
-
-    if (item.allday) {
-        if (endDate && endDate !== startDate) {
-            return `${startDate} - ${endDate} · Ganztägig`
-        }
-        return `${startDate} · Ganztägig`
+async function loadRelatedTermine(selected: Termin): Promise<void> {
+    try {
+        const termine = await terminService.getAll({ veranstaltung: selected.veranstaltung.id })
+        relatedTermine.value = termine.filter((item) => item.id !== selected.id)
+    } catch {
+        relatedTermine.value = []
     }
-
-    if (!endDate || endDate === startDate) {
-        return startDate
-    }
-
-    const startTime = typeof item.start === 'string' && item.start.includes('T') ? item.start.split('T')[1]?.slice(0, 5) : undefined
-    const endTime = typeof item.ende === 'string' && item.ende.includes('T') ? item.ende.split('T')[1]?.slice(0, 5) : undefined
-
-    if (startTime && endTime && startDate === endDate) {
-        return `${startDate} · ${startTime} - ${endTime}`
-    }
-
-    return `${startDate} - ${endDate}`
 }
 
-async function loadTerminDetails() {
+async function loadTerminDetails(): Promise<void> {
     loading.value = true
     error.value = null
+    relatedTermine.value = []
+    imageFailed.value = false
 
     try {
-        const response = await ApiService.get<ITermin[]>('/termine')
-        const allTermine = response
-        const selected = allTermine.find((item) => String(item.id) === terminId.value)
-
-        if (!selected) {
-            error.value = 'Der angeforderte Termin konnte nicht gefunden werden.'
-            termin.value = null
-            relatedTermine.value = []
-            return
-        }
-
-        termin.value = selected
-
-        if (selected.veranstaltung?.id) {
-            ApiService.get<ITermin[]>('/termine?veranstaltung=' + selected.veranstaltung.id)
-                .then((response) => (relatedTermine.value = response.filter((item) => item.id !== selected.id)))
-                .catch(() => {
-                    error.value = 'Die verwandten Termine konnten nicht geladen werden.'
-                    relatedTermine.value = []
-                })
-        } else {
-            relatedTermine.value = []
-        }
-    } catch {
-        error.value = 'Die Termin-Details konnten nicht geladen werden.'
+        termin.value = await terminService.getById(terminId.value)
+        void loadRelatedTermine(termin.value)
+    } catch (err) {
+        termin.value = null
+        error.value = err instanceof ApiError && err.status === 404 ? 'Der angeforderte Termin konnte nicht gefunden werden.' : 'Die Termin-Details konnten nicht geladen werden.'
     } finally {
         loading.value = false
     }
@@ -220,6 +188,19 @@ watch(terminId, () => {
     min-height: 16rem;
 }
 
+.hero-image.hero-image--placeholder {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, var(--p-primary-color) 0%, var(--p-primary-800, var(--p-primary-color)) 100%);
+}
+
+.hero-placeholder-icon {
+    font-size: 4rem;
+    color: rgba(255, 255, 255, 0.25);
+}
+
 .hero-image {
     width: 100%;
     height: 16rem;
@@ -235,11 +216,6 @@ watch(terminId, () => {
     align-items: flex-end;
 }
 
-.hero-image-wrapper:not(:has(img[src]:not([src='']))) .hero-overlay,
-.hero-image-wrapper:has(img[src='']) .hero-overlay,
-.hero-image-wrapper:has(img[onerror]) .hero-overlay {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.14) 100%);
-}
 
 .hero-content {
     padding: 2rem;

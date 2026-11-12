@@ -5,5 +5,5 @@ const currentYear = ref(heute.value.getFullYear())
 </script>
 
 <template>
-    <div class="layout-footer">Brombeerland Veranstaltungsverwaltung | © {{ currentYear }} Alle Rechte vorbehalten</div>
+    <div class="layout-footer">Brombeerland gUG © {{ currentYear }} Alle Rechte vorbehalten</div>
 </template>

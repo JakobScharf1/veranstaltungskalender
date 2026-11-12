@@ -3,31 +3,37 @@
         <template #content>
             <div class="card-content">
                 <div class="card-topline">
-                    <span class="card-kategorie">{{ item?.veranstaltung?.kategorie?.name }}</span>
-                    <span v-if="date" class="card-date">📅 {{ item.start }}</span>
+                    <span class="card-kategorie">{{ item.veranstaltung.kategorie?.name }}</span>
+                    <span v-if="showDate" class="card-date">📅 {{ formatTerminRange(item) }}</span>
                 </div>
-                <h2 class="card-titel">{{ item?.veranstaltung?.titel }}</h2>
-                <p class="card-subtitle">📍 {{ item?.veranstaltung?.ort?.bezeichnung }}, {{ item?.veranstaltung?.ort?.adresse?.ort }}</p>
-                <p class="card-beschreibung">{{ item?.veranstaltung?.info }}</p>
+                <h2 class="card-titel">{{ item.veranstaltung.titel }}</h2>
+                <p class="card-subtitle">📍 {{ item.veranstaltung.ort.bezeichnung }}, {{ item.veranstaltung.ort.adresse.ort }}</p>
+                <p class="card-beschreibung">{{ item.veranstaltung.info }}</p>
             </div>
         </template>
 
         <template #footer>
-            <RouterLink :to="`/termin/${item.id}/${toUrlFriendly(item.veranstaltung?.titel) || 'termin'}`">
-                <Button label="Mehr erfahren" severity="secondary" class="w-full" />
-            </RouterLink>
+            <Button as="router-link" :to="detailLink" label="Mehr erfahren" severity="secondary" class="w-full" :aria-label="`Mehr erfahren: ${item.veranstaltung.titel}`" />
         </template>
     </Card>
 </template>
 
 <script setup lang="ts">
-import { ITermin } from '@/models/termin';
-import { toUrlFriendly } from '@/services/Helper';
+import type { Termin } from '@/types'
+import { formatTerminRange } from '@/utils/date'
+import { toUrlFriendly } from '@/utils/url'
+import { computed } from 'vue'
 
-const props = defineProps<{
-    item: ITermin,
-    date: boolean,
-}>()
+const props = withDefaults(
+    defineProps<{
+        item: Termin
+        /** Datum anzeigen (in der Kalender-Tagesansicht überflüssig) */
+        showDate?: boolean
+    }>(),
+    { showDate: false }
+)
+
+const detailLink = computed(() => `/termin/${props.item.id}/${toUrlFriendly(props.item.veranstaltung.titel) || 'termin'}`)
 </script>
 
 <style>

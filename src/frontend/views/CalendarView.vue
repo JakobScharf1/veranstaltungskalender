@@ -3,9 +3,9 @@
 
         <!-- Navigation -->
         <div class="kalender-header">
-            <Button icon="fa-solid fa-chevron-left" text rounded @click="prevMonth" />
-            <h2 class="kalender-monat">{{ monatLabel }}</h2>
-            <Button icon="fa-solid fa-chevron-right" text rounded @click="nextMonth" />
+            <Button icon="fa-solid fa-chevron-left" text rounded aria-label="Vorheriger Monat" @click="prevMonth" />
+            <h2 class="kalender-monat" aria-live="polite">{{ monatLabel }}</h2>
+            <Button icon="fa-solid fa-chevron-right" text rounded aria-label="Nächster Monat" @click="nextMonth" />
         </div>
 
         <div v-if="loading" class="loading-state">
@@ -31,7 +31,12 @@
                     heute: isHeute(tag),
                     'hat-events': getEvents(tag).length > 0
                 }"
+                :role="getEvents(tag).length > 0 ? 'button' : undefined"
+                :tabindex="getEvents(tag).length > 0 ? 0 : undefined"
+                :aria-label="getEvents(tag).length > 0 ? `${tag}. – ${getEvents(tag).length} Termine anzeigen` : undefined"
                 @click="getEvents(tag).length > 0 && openDay(tag)"
+                @keydown.enter.prevent="getEvents(tag).length > 0 && openDay(tag)"
+                @keydown.space.prevent="getEvents(tag).length > 0 && openDay(tag)"
             >
                 <span class="tag-nummer">{{ tag }}</span>
                 <div class="event-dots">
@@ -46,29 +51,29 @@
     </div>
 
     <!-- Detail Drawer für einen Tag -->
-    <Drawer v-model:visible="drawerVisible" :header="drawerHeader" position="right" style="width: 26rem">
+    <Drawer v-model:visible="drawerVisible" :header="drawerHeader" position="right" class="w-full sm:w-[26rem]">
         <div class="drawer-events">
-            <TerminCard v-for="event in selectedEvents" :key="event.id" :item="event" :date="false"></TerminCard>
+            <TerminCard v-for="event in selectedEvents" :key="event.id" :item="event" />
         </div>
     </Drawer>
 </template>
 
 <script setup lang="ts">
-import { ITermin } from '@/models/termin'
-import { ApiService } from '@/services/APIService'
-import { dateToString, formatDate } from '@/services/Helper'
+import TerminCard from '@/frontend/components/TerminCard.vue'
+import { terminService } from '@/services/resources'
+import type { Termin } from '@/types'
+import { getMonthRange, toApiDateTime, toDateKey } from '@/utils/date'
 import { computed, onMounted, ref, watch } from 'vue'
-import TerminCard from '../components/TerminCard.vue'
 
-let loading = ref(true)
+const loading = ref(true)
 
-const events = ref<ITermin[]>([])
+const events = ref<Termin[]>([])
 const heute = new Date()
 const currentYear = ref(heute.getFullYear())
 const currentMonth = ref(heute.getMonth()) // 0-basiert
 
 const drawerVisible = ref(false)
-const selectedEvents = ref<ITermin[]>([])
+const selectedEvents = ref<Termin[]>([])
 const selectedDay = ref<number | null>(null)
 
 const wochentage = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -92,20 +97,15 @@ const drawerHeader = computed(() => {
     return new Date(currentYear.value, currentMonth.value, selectedDay.value).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 })
 
-function toDateKey(date: Date): string {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function isEventOnDay(event: ITermin, day: number): boolean {
-    const dayDate = new Date(currentYear.value, currentMonth.value, day)
-    const dayKey = toDateKey(dayDate)
-    const startKey = formatDate(event.start)
-    const endKey = formatDate(event.ende ?? event.start)
+function isEventOnDay(event: Termin, day: number): boolean {
+    const dayKey = toDateKey(new Date(currentYear.value, currentMonth.value, day))
+    const startKey = toDateKey(event.start)
+    const endKey = toDateKey(event.ende ?? event.start)
 
     return dayKey >= startKey && dayKey <= endKey
 }
 
-function getEvents(day: number): ITermin[] {
+function getEvents(day: number): Termin[] {
     return events.value.filter((event) => isEventOnDay(event, day))
 }
 
@@ -137,20 +137,20 @@ function openDay(day: number) {
     drawerVisible.value = true
 }
 
-async function loadEvents() {
+async function loadEvents(): Promise<void> {
     loading.value = true
-    const startDate = new Date(currentYear.value, currentMonth.value - 1, 1)
-    const endDate = new Date(currentYear.value, currentMonth.value + 2, 0)
 
-    const response = await ApiService.get<ITermin[]>('/termine', {
-        params: {
-            start: formatDate(startDate),
-            ende: formatDate(endDate)
-        }
-    })
+    // Mehrtägige Termine aus dem Vormonat sollen ebenfalls erscheinen
+    const start = toApiDateTime(new Date(currentYear.value, currentMonth.value - 1, 1))
+    const { ende } = getMonthRange(currentYear.value, currentMonth.value)
 
-    events.value = response
-    loading.value = false
+    try {
+        events.value = await terminService.getAll({ start, ende })
+    } catch {
+        events.value = []
+    } finally {
+        loading.value = false
+    }
 }
 
 onMounted(() => {

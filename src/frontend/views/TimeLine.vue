@@ -1,22 +1,37 @@
 <template>
 
-    <div v-if="loading" class="loading-state">
-        <ProgressSpinner />
-        <p>Daten werden geladen...</p>
-    </div>
-
-    <Card v-else class="mx-5">
+    <Card class="mx-5">
         <template #content>
-            <DataView :value="items" data-key="id">
-                <template #header>
-                    <FilterBar @loadEvents="loadEvents"></FilterBar>
-                </template>
+            <div class="timeline-toolbar">
+                <div class="timeline-toolbar-left">
+                    <FilterBar @change="filter = $event" />
+                </div>
+
+                <div class="timeline-month-nav">
+                    <Button icon="fa-solid fa-chevron-left" text rounded aria-label="Vorheriger Monat" @click="shiftMonth(-1)" />
+                    <div class="timeline-month-label">
+                        <h3 aria-live="polite">{{ monthLabel }}</h3>
+                    </div>
+                    <Button icon="fa-solid fa-chevron-right" text rounded aria-label="Nächster Monat" @click="shiftMonth(1)" />
+                </div>
+
+                <div class="timeline-toolbar-spacer"></div>
+            </div>
+
+            <div v-if="loading" class="loading-state" role="status">
+                <ProgressSpinner />
+                <p>Daten werden geladen...</p>
+            </div>
+
+            <Message v-else-if="fehler" severity="error" :closable="false">Die Termine konnten nicht geladen werden.</Message>
+
+            <DataView v-else :value="sichtbareTermine" data-key="id">
                 <template #list="{ items: dataItems }">
                     <div class="card-grid">
-                        <TerminCard v-for="item in dataItems" :key="item.id" :item="item" :date="true"></TerminCard>
+                        <TerminCard v-for="item in dataItems" :key="item.id" :item="item" show-date />
                     </div>
                 </template>
-                <template #empty class="justify-content-center">
+                <template #empty>
                     <p class="text-center py-4">Keine Veranstaltungen gefunden.</p>
                 </template>
             </DataView>
@@ -25,49 +40,108 @@
 </template>
 
 <script setup lang="ts">
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import FilterBar from '@/frontend/components/FilterBar.vue'
-import type { FilterOption } from '@/frontend/types'
-import { ITermin } from '@/models/termin'
-import { ApiService } from '@/services/APIService'
-import { onMounted, ref } from 'vue'
-import { formatDate, dateToString } from '@/services/Helper'
-import TerminCard from '../components/TerminCard.vue'
+import TerminCard from '@/frontend/components/TerminCard.vue'
+import { terminService } from '@/services/resources'
+import type { Termin, TerminFilter, TerminQuery } from '@/types'
+import { getMonthRange } from '@/utils/date'
+import { computed, onMounted, ref, watch } from 'vue'
 
-let items = ref<ITermin[]>([])
-let loading = ref(true)
+const heute = new Date()
 
-async function loadEvents(activeFilters?: Record<string, any>, filterOptions?: FilterOption[]) {
-    loading.value = true
-    const params = new URLSearchParams()
-    let url = '/termine'
-    if (activeFilters && filterOptions) {
-        for (const key of Object.keys(activeFilters)) {
-            const opt = filterOptions.find((f) => f.key === key)!
-            const val = activeFilters[key]
-            if (key === 'datum') {
-                if (val.von) params.set('start', formatDate(val.von))
-                if (val.bis) params.set('ende', formatDate(val.bis))
-            } else if (key === 'kostenlos') {
-                params.set('kostenlos', String(val))
-            } else if (val) {
-                params.set(opt.queryParam as string, val)
-            }
-        }
-        url = url + `${params.size ? '?' + params.toString() : ''}`
-    }
-    items.value = await ApiService.get<ITermin[]>(url)
-    for(const item of items.value) {
-        item.start = dateToString(item.start)
-        if (item.ende) item.ende = dateToString(item.ende)
-    }
-    loading.value = false
+const termine = ref<Termin[]>([])
+const loading = ref(true)
+const fehler = ref(false)
+const filter = ref<TerminFilter>({})
+const selectedMonth = ref(new Date(heute.getFullYear(), heute.getMonth(), 1))
+
+const monthLabel = computed(() => selectedMonth.value.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }))
+
+// „kostenlos" bietet die API nicht als Parameter an → clientseitig filtern
+const sichtbareTermine = computed(() => {
+    if (!filter.value.kostenlos) return termine.value
+    return termine.value.filter((termin) => termin.veranstaltung.kostenlos)
+})
+
+function shiftMonth(offset: number): void {
+    const current = selectedMonth.value
+    selectedMonth.value = new Date(current.getFullYear(), current.getMonth() + offset, 1)
 }
 
-onMounted(loadEvents)
+function buildQuery(): TerminQuery {
+    const { start, ende } = getMonthRange(selectedMonth.value.getFullYear(), selectedMonth.value.getMonth())
+
+    return {
+        start,
+        ende,
+        titel: filter.value.titel,
+        ort: filter.value.ort,
+        kategorie: filter.value.kategorie?.toString()
+    }
+}
+
+async function loadTermine(): Promise<void> {
+    loading.value = true
+    fehler.value = false
+
+    try {
+        termine.value = await terminService.getAll(buildQuery())
+    } catch {
+        fehler.value = true
+        termine.value = []
+    } finally {
+        loading.value = false
+    }
+}
+
+onMounted(() => {
+    void loadTermine()
+})
+
+watch([selectedMonth, filter], () => {
+    void loadTermine()
+})
 </script>
 
 <style>
+.timeline-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.timeline-toolbar-left {
+    justify-self: start;
+    min-width: 0;
+}
+
+.timeline-toolbar-spacer {
+    justify-self: end;
+}
+
+.timeline-month-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-self: center;
+}
+
+.timeline-month-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 10rem;
+}
+
+.timeline-month-label h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
 /* Grid */
 .card-grid {
     display: grid;
@@ -89,5 +163,4 @@ onMounted(loadEvents)
         gap: 0.75rem;
     }
 }
-
 </style>

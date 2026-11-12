@@ -1,216 +1,96 @@
 <script setup lang="ts">
-import EditEvent from '@/admin/components/EditEvent.vue'
-import { ITermin } from '@/models/termin'
-import { TermineService } from '@/services/TermineService'
-import { useAuthStore } from '@/store/auth'
-import { FilterMatchMode } from '@primevue/core/api'
-import { useToast } from 'primevue/usetoast'
+import AdminListCard from '@/admin/components/common/AdminListCard.vue'
+import RowActions from '@/admin/components/common/RowActions.vue'
+import TerminDialog from '@/admin/components/termin/TerminDialog.vue'
+import { desktopOnlyColumn, tableDefaults } from '@/admin/config/table'
+import { useAdminFeedback } from '@/admin/composables/useAdminFeedback'
+import { useEditDialog } from '@/admin/composables/useEditDialog'
+import { toTerminCreatePayload, toTerminUpdatePayload } from '@/admin/forms/terminForm'
+import { useTermineStore } from '@/store/resources'
+import type { Termin, TerminForm } from '@/types'
+import { formatTerminRange } from '@/utils/date'
 import { onMounted, ref } from 'vue'
 
-const toast = useToast()
-const events = ref<ITermin[]>([])
-const eventDialog = ref(false)
-const deleteDialog = ref(false)
-const deleteMultiDialog = ref(false)
-const event = ref<ITermin | null>(null)
-const selectedEvents = ref<ITermin[]>([])
-const filters = ref({})
-const search = ref('')
-const submitted = ref(false)
-const authStore = useAuthStore()
-const loading = ref(true)
+const termineStore = useTermineStore()
+const { run, confirmDelete } = useAdminFeedback()
+const { visible, selected, saving, openCreate, openEdit, save } = useEditDialog<Termin>()
 
-onMounted(async () => {
-    authStore.fetchUser()
-    loading.value = true
-    events.value = await TermineService.getEvents()
-    loading.value = false
+const selectedTermine = ref<Termin[]>([])
+
+onMounted(() => {
+    void run(() => termineStore.load(true))
 })
 
-function openNew(): void {
-    event.value = {
-         veranstaltung: {
-            titel: '',
-            ort: {
-                bezeichnung: '',
-                adresse: { ort: '' }
-            },
-            veranstalter: {
-                bezeichnung: '',
-                adresse: { ort: '' }
-            },
-            kategorie: { id: 0, name: '' },
-            kostenlos: false
-        },
-        start: '',
-        ende: '',
-        allday: false,
-        info: ''
+function terminBezeichnung(termin: Termin): string {
+    return `${termin.veranstaltung.titel} (${formatTerminRange(termin)})`
+}
+
+function onSave(form: TerminForm): void {
+    const item = selected.value
+    const action = item ? () => termineStore.update(item.id, toTerminUpdatePayload(item.id, form)) : () => termineStore.create(toTerminCreatePayload(form))
+
+    void save(() => run(action, 'Termin wurde gespeichert.'))
+}
+
+function onDelete(termin: Termin): void {
+    confirmDelete(`Möchtest du den Termin „${terminBezeichnung(termin)}" wirklich löschen?`, () => termineStore.remove(termin.id), 'Termin wurde gelöscht.')
+}
+
+function onDeleteSelected(): void {
+    const termine = selectedTermine.value
+
+    async function deleteAll(): Promise<void> {
+        await Promise.all(termine.map((termin) => termineStore.remove(termin.id)))
+        selectedTermine.value = []
     }
-    submitted.value = false
-    eventDialog.value = true
-}
 
-function hideEditDialog(): void {
-    eventDialog.value = false
-    submitted.value = false
-}
-
-function saveEdit(): void {
-    submitted.value = true
-
-    if (!event.value) {
-        toast.add({ severity: 'error', summary: 'Fehler', detail: 'Titel darf nicht leer sein', life: 3000 })
-    } else {
-        if (event.value?.veranstaltung.titel?.trim()) {
-            if (event.value.id) {
-                events.value.find((item) => item.id === event.value!.id)
-                toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung aktualisiert', life: 3000 })
-            } else {
-                event.value.veranstaltung.picture1 = 'product-placeholder.svg'
-                events.value.push(event.value)
-                toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung erstellt', life: 3000 })
-            }
-
-            eventDialog.value = false
-            event.value = null
-        }
-    }
-}
-
-function editEvent(ev: ITermin): void {
-    event.value = { ...ev }
-    eventDialog.value = true
-}
-
-function confirmDelete(ev: ITermin): void {
-    event.value = ev
-    deleteDialog.value = true
-}
-
-function deleteEvent(): void {
-    events.value = events.value.filter((val) => val.id !== event.value!.id)
-    deleteDialog.value = false
-    event.value = null
-    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
-}
-
-function confirmDeleteSelected() {
-    deleteMultiDialog.value = true
-}
-
-function deleteSelectedEvents() {
-    events.value = events.value.filter((val) => !selectedEvents.value.includes(val))
-    deleteMultiDialog.value = false
-    selectedEvents.value = []
-    toast.add({ severity: 'success', summary: 'Erfolgreich', detail: 'Veranstaltung gelöscht', life: 3000 })
-}
-
-function onImgUpload(event: any): void {
-    console.log('Image uploaded', event)
+    confirmDelete(`Möchtest du die ${termine.length} ausgewählten Termine wirklich löschen?`, deleteAll, 'Termine wurden gelöscht.')
 }
 </script>
 
 <template>
-    <div>
-        <div class="card">
-            <Toolbar class="mb-6">
-                <template #start>
-                    <Button label="Neu" icon="pi pi-plus" severity="secondary" class="mr-2" @click="openNew" />
-                    <Button label="Löschen" icon="pi pi-trash" severity="secondary" @click="confirmDeleteSelected" :disabled="!selectedEvents || !selectedEvents.length" />
-                </template>
-            </Toolbar>
-
-            <DataTable
-                ref="dt"
-                v-model:selection="selectedEvents"
-                :value="events"
-                dataKey="id"
-                :paginator="true"
-                :rows="10"
-                :filters="filters"
-                paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                :rowsPerPageOptions="[5, 10, 25]"
-                currentPageReportTemplate="Zeige {first} bis {last} von {totalRecords}"
-            >
-                <template #header>
-                    <div class="flex flex-wrap gap-2 items-center justify-between">
-                        <IconField>
-                            <InputIcon>
-                                <i class="pi pi-search" />
-                            </InputIcon>
-                            <InputText v-model="search" placeholder="Suchen..." />
-                        </IconField>
-                    </div>
-                </template>
-
-                <div v-if="loading" class="loading-state">
-                    <ProgressSpinner />
-                    <p>Daten werden geladen...</p>
-                </div>
-
-                <template v-else>
-                    <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-                    <Column field="image" header="Bild" style="min-width: 10rem">
-                        <template #body="slotProps">
-                            <img v-if="slotProps.data.image" :src="slotProps.data.image" :alt="slotProps.data.image" class="w-24 rounded" />
-                            <img v-else src="../../../public/images/img.svg" :alt="slotProps.data.name" class="w-24 rounded" />
-                        </template>
-                    </Column>
-                    <Column header="Veranstalter" sortable style="min-width: 10rem">
-                        <template #body="slotProps">
-                            {{ slotProps.data.veranstaltung?.veranstalter?.bezeichnung || '' }}
-                        </template>
-                    </Column>
-                    <Column header="Datum" sortable style="min-width: 10rem">
-                        <template #body="slotProps">
-                            {{ TermineService.formatDateToString(slotProps.data.start) }}
-                        </template>
-                    </Column>
-                    <Column header="Titel" sortable style="min-width: 16rem">
-                        <template #body="slotProps">
-                            {{ slotProps.data.veranstaltung?.titel || '' }}
-                        </template>
-                    </Column>
-                    <Column header="Kategorie" sortable style="min-width: 10rem">
-                        <template #body="slotProps">
-                            {{ slotProps.data.veranstaltung?.kategorie?.name || '' }}
-                        </template>
-                    </Column>
-                    <Column :exportable="false" style="min-width: 12rem">
-                        <template #body="slotProps">
-                            <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editEvent(slotProps.data)" />
-                            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDelete(slotProps.data)" />
-                        </template>
-                    </Column>
-                </template>
-            </DataTable>
-        </div>
-
-        <EditEvent v-model:visible="eventDialog" :item="event!" @cancel="hideEditDialog" @save="saveEdit" @upload="onImgUpload" />
-
-        <Dialog v-model:visible="deleteDialog" :style="{ width: '450px' }" header="Löschen bestätigen" :modal="true">
-            <div class="flex items-center gap-4">
-                <i class="pi pi-exclamation-triangle text-3xl!" />
-                <span v-if="event">
-                    Bist du sicher, dass du die Veranstaltung <b>{{ event.veranstaltung.titel }}</b> löschen willst?
-                </span>
-            </div>
-            <template #footer>
-                <Button label="Nein" icon="pi pi-times" text @click="deleteDialog = false" />
-                <Button label="Ja" icon="pi pi-check" @click="deleteEvent" />
+    <AdminListCard titel="Termine" create-label="Neuer Termin" @create="openCreate">
+        <Toolbar v-if="selectedTermine.length" class="mb-4">
+            <template #start>
+                <span class="font-medium">{{ selectedTermine.length }} ausgewählt</span>
             </template>
-        </Dialog>
-
-        <Dialog v-model:visible="deleteMultiDialog" :style="{ width: '450px' }" header="Löschen bestätigen" :modal="true">
-            <div class="flex items-center gap-4">
-                <i class="pi pi-exclamation-triangle text-3xl!" />
-                <span v-if="selectedEvents && selectedEvents.length">Bist du sicher, dass du die ausgewählten Veranstaltungen löschen willst?</span>
-            </div>
-            <template #footer>
-                <Button label="Nein" icon="pi pi-times" text @click="deleteMultiDialog = false" />
-                <Button label="Ja" icon="pi pi-check" text @click="deleteSelectedEvents" />
+            <template #end>
+                <Button label="Auswahl löschen" icon="pi pi-trash" severity="danger" outlined @click="onDeleteSelected" />
             </template>
-        </Dialog>
-    </div>
+        </Toolbar>
+
+        <DataTable v-model:selection="selectedTermine" :value="termineStore.items" :loading="termineStore.loading" v-bind="tableDefaults">
+            <template #empty>Keine Termine vorhanden.</template>
+
+            <Column selection-mode="multiple" class="w-12" />
+
+            <Column header="Datum">
+                <template #body="{ data }: { data: Termin }">{{ formatTerminRange(data) }}</template>
+            </Column>
+
+            <Column header="Veranstaltung">
+                <template #body="{ data }: { data: Termin }">
+                    <div class="font-medium">{{ data.veranstaltung.titel }}</div>
+                    <div class="text-sm text-muted-color">{{ data.veranstaltung.ort.bezeichnung }}, {{ data.veranstaltung.ort.adresse.ort }}</div>
+                </template>
+            </Column>
+
+            <Column header="Kategorie" v-bind="desktopOnlyColumn">
+                <template #body="{ data }: { data: Termin }">{{ data.veranstaltung.kategorie?.name ?? '–' }}</template>
+            </Column>
+
+            <Column header="Veranstalter" v-bind="desktopOnlyColumn">
+                <template #body="{ data }: { data: Termin }">{{ data.veranstaltung.veranstalter?.bezeichnung ?? '–' }}</template>
+            </Column>
+
+            <Column class="w-0 whitespace-nowrap">
+                <template #header><span class="sr-only">Aktionen</span></template>
+                <template #body="{ data }: { data: Termin }">
+                    <RowActions :bezeichnung="terminBezeichnung(data)" @edit="openEdit(data)" @delete="onDelete(data)" />
+                </template>
+            </Column>
+        </DataTable>
+    </AdminListCard>
+
+    <TerminDialog v-model:visible="visible" :item="selected" :saving="saving" @save="onSave" />
 </template>
