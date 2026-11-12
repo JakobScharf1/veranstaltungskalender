@@ -8,7 +8,8 @@ coverage
 .env
 dist
 .DS_Store
-.idea
+.vscode
 .eslintcache
 api-generator/typedoc.json
 **/.DS_Store
+package-lock.json
